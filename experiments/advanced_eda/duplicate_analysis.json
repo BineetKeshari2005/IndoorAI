@@ -1,0 +1,40 @@
+{
+  "total_rows_involved_in_duplicate_groups": 762,
+  "redundant_duplicate_rows_count": 637,
+  "user_concentration": {
+    "13": 622,
+    "16": 4,
+    "17": 4,
+    "6": 3,
+    "1": 3,
+    "9": 1
+  },
+  "phone_concentration": {
+    "17": 622,
+    "14": 8,
+    "22": 4,
+    "19": 3
+  },
+  "building_concentration": {
+    "2": 376,
+    "1": 258,
+    "0": 3
+  },
+  "floor_concentration": {
+    "4": 375,
+    "1": 218,
+    "0": 37,
+    "3": 7
+  },
+  "building_floor_combination_concentration": {
+    "bld_0_flr_0": 2,
+    "bld_0_flr_3": 1,
+    "bld_1_flr_0": 35,
+    "bld_1_flr_1": 218, 
+    "bld_1_flr_3": 5,
+    "bld_2_flr_3": 1,
+    "bld_2_flr_4": 375
+  },
+  "primary_source_finding": "User 13 operating Phone 17 accounts for 622 of the 637 redundant duplicate records (97.6%). These duplicates are heavily concentrated on Floor 4 of Building 2 (375 records) and Floor 1 of Building 1 (218 records). Analysis of consecutive sample timestamps indicates rapid repeated fingerprinter logging at identical physical test locations.",
+  "preprocessing_recommendation": "Duplicates should NOT be removed in Task 03 per prompt constraints. In Task 04, deduplication should be offered as a configurable preprocessing option to prevent synthetic data leakage into cross-validation folds."
+}

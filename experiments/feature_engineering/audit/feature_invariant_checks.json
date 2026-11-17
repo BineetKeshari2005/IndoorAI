@@ -1,0 +1,68 @@
+{
+  "training": {
+    "total_samples": 19937,
+    "invariant_A_sum_bands_equals_visible": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_B_strongest_1_equals_max": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_C_visible_plus_unavailable_is_520": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_D_ratio_equals_visible_div_520": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_E_range_equals_max_minus_min": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_F_ordered_signal_ranks": {
+      "violations": 0,
+      "passed": true
+    },
+    "all_invariants_passed": true
+  },
+  "validation": {
+    "total_samples": 1111,
+    "invariant_A_sum_bands_equals_visible": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_B_strongest_1_equals_max": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_C_visible_plus_unavailable_is_520": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_D_ratio_equals_visible_div_520": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_E_range_equals_max_minus_min": {
+      "violations": 0,
+      "max_diff": 0.0,
+      "passed": true
+    },
+    "invariant_F_ordered_signal_ranks": {
+      "violations": 0,
+      "passed": true
+    },
+    "all_invariants_passed": true
+  }
+}

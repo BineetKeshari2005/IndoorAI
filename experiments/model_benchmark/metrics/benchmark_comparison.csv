@@ -1,0 +1,13 @@
+Task / Metric Dimension,Random Forest (Task 07),k-NN (Task 08),Difference (k-NN - RF),Winning Model,Operational Note
+1. Building Classification Accuracy,99.82% (CV: 99.80%),99.91% (CV: 99.79%),+0.09%,"k-NN (99.91% vs 99.82%, only 1 error)",Both models essentially master campus-level building separation
+2. Floor Classification Accuracy,88.66% (CV: 84.50%),84.43% (CV: 83.17%),-4.23%,Random Forest (+4.23% higher accuracy),Decision tree thresholding captures vertical concrete slab attenuation better
+3. Combined Building-Floor Accuracy,88.48% (CV: 84.45%),84.43% (CV: 83.03%),-4.05%,Random Forest (+4.05% higher accuracy),Floor classification determines overall building-floor success
+4. Longitude Regression (MAE / RMSE),MAE: 7.95 / RMSE: 11.79,MAE: 6.71 / RMSE: 10.17,MAE: -1.23 units,k-NN (15.5% lower MAE),Distance-weighted interpolation provides smooth continuous coordinates
+5. Latitude Regression (MAE / RMSE),MAE: 6.75 / RMSE: 10.30,MAE: 6.10 / RMSE: 9.52,MAE: -0.66 units,k-NN (9.7% lower MAE),Avoids orthogonal step-function boundaries inherent to decision trees
+6. 2D Euclidean Coordinate Error (Mean),11.53 units (CV: 12.81),10.05 units (CV: 10.04),-1.48 units,k-NN (-1.48 units / 12.8% error reduction),Achieves lower mean error in all 3 campus buildings
+7. 2D Euclidean Coordinate Error (Median),8.65 units,7.33 units (CV: 6.77),-1.32 units,k-NN (-1.32 units / 15.3% error reduction),50% of validation queries localized within 7.33 units
+8. 2D Euclidean Coordinate Error (95th %),32.74 units,29.06 units,-3.68 units,k-NN (-3.68 units tighter tail bound),Maximum error reduced from 115.18 units (RF) to 68.02 units (k-NN)
+9. Model Suite Storage Footprint,"561.06 MB (5 heads, 200 trees/head)","17.68 MB (5 heads, index arrays)",-543.38 MB,k-NN (96.8% smaller footprint),k-NN easily fits in mobile edge storage; RF requires ~0.56 GB
+10. Validation Inference Latency,0.121 ms / sample (0.13 s total),1.192 ms / sample (1.32 s total),+1.071 ms,Random Forest (~10x faster inference),"k-NN requires brute-force pairwise distance matrix against 19,937 samples"
+11. Evaluated Feature Representation,"Variant B (1,058 features, unscaled summary stats)","Variant B (1,058 features, MinMaxScaler on 18 summary stats)",Same features; k-NN requires training-fitted summary scaler,Invariant to scaling (RF) / Scaled (k-NN),Unscaled summary stats collapse k-NN accuracy to 26.01%
+12. Primary Generalization Limitation,Evaluated on single surveyor (USERID 0),Evaluated on single surveyor (USERID 0),Common validation constraint,Tied (both constrained by UJIIndoorLoc benchmark split),Validation split contains 11 phones (9 unseen in train) but only 1 user

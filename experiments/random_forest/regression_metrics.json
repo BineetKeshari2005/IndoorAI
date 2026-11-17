@@ -1,0 +1,27 @@
+{
+  "sample_count": 1111,
+  "longitude": {
+    "mae": 7.947,
+    "rmse": 11.7883,
+    "medae": 5.3702,
+    "r2": 0.9904
+  },
+  "latitude": {
+    "mae": 6.7537,
+    "rmse": 10.2977,
+    "medae": 4.1269,
+    "r2": 0.9785
+  },
+  "euclidean_error": {
+    "unit": "dataset_coordinate_units",
+    "mean": 11.5284,
+    "median": 8.6539,
+    "std": 10.5879,
+    "min": 0.239,
+    "max": 115.1781,
+    "q25": 4.6536,
+    "q75": 15.1963,
+    "q90": 24.5389,
+    "q95": 32.7401
+  }
+}

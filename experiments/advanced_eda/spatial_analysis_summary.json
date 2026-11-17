@@ -1,0 +1,54 @@
+{
+  "global_coordinate_bounds": {
+    "longitude_min": -7691.338399998844,
+    "longitude_max": -7300.818990092725,
+    "latitude_min": 4864745.745015971,
+    "latitude_max": 4865016.687799998
+  },
+  "building_coordinate_bounds": {
+    "building_0": {
+      "sample_count": 5249,
+      "longitude_range": [
+        -7691.338399998844,
+        -7587.041400000453
+      ],
+      "latitude_range": [
+        4864897.526100002,
+        4865016.687799998
+      ],
+      "longitude_span": 104.297,
+      "latitude_span": 119.162
+    },
+    "building_1": {
+      "sample_count": 5196,
+      "longitude_range": [
+        -7578.46197155118,
+        -7404.491683006287
+      ],
+      "latitude_range": [
+        4864810.030100003,
+        4864959.505251184
+      ],
+      "longitude_span": 173.97,
+      "latitude_span": 149.475
+    },
+    "building_2": {
+      "sample_count": 9492,
+      "longitude_range": [
+        -7415.163003530353,
+        -7300.818990092725
+      ],
+      "latitude_range": [
+        4864745.745015971,
+        4864861.7561028525
+      ],
+      "longitude_span": 114.344,
+      "latitude_span": 116.011
+    }
+  },
+  "coordinate_reference_system_investigation": {
+    "status": "UNVERIFIED_PRESERVED_METRIC_COORDINATES",
+    "observed_value_scale": "Longitude values in [-7691.34, -7300.82]; Latitude values in [4864745.75, 4865016.69]",
+    "analysis": "The coordinates are provided as continuous floating-point values in meters. While earlier literature ambiguously termed them 'WGS84 UTM' or 'WGS84 degrees', the numerical magnitudes closely match Web Mercator metric projection (EPSG:3857) for the Universitat Jaume I campus in Castellon, Spain. However, per system constraints, coordinates are preserved in their original numeric representation without performing unverified coordinate transformations or computing geodesic distances based on assumed ellipsoids."
+  }
+}

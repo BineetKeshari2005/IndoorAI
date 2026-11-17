@@ -1,0 +1,59 @@
+# ==============================================================================
+# IndoorAI - Multitask Deep Learning (MLP) Configuration (Task 12)
+# ==============================================================================
+
+experiment:
+  name: "multitask_mlp"
+  seed: 42
+  experiment_dir: "experiments/mlp"
+  models_dir: "experiments/mlp/models"
+  predictions_dir: "experiments/mlp/predictions"
+  metrics_dir: "experiments/mlp/metrics"
+  visualizations_dir: "experiments/mlp/visualizations"
+  reports_dir: "experiments/mlp/reports"
+
+data:
+  train_features: "data/processed/ujiindoorloc/feature_engineered/X_train_engineered.parquet"
+  val_features: "data/processed/ujiindoorloc/feature_engineered/X_validation_engineered.parquet"
+  train_targets: "data/processed/ujiindoorloc/y_train.parquet"
+  val_targets: "data/processed/ujiindoorloc/y_validation.parquet"
+  train_metadata: "data/processed/ujiindoorloc/metadata_train.parquet"
+  val_metadata: "data/processed/ujiindoorloc/metadata_validation.parquet"
+  encoders: "experiments/preprocessing/artifacts/target_encoders.json"
+  feature_count: 1058
+  base_feature_count: 1040
+
+model:
+  input_dim: 1058
+  hidden_dims: [512, 256, 128]
+  dropouts: [0.30, 0.25]
+  num_buildings: 3
+  num_floors: 5
+
+training:
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.0001
+  epochs: 120
+  patience: 15
+  lr_factor: 0.5
+  lr_patience: 5
+  min_lr: 0.000001
+  loss_type: "smooth_l1"
+  loss_weights:
+    building: 1.0
+    floor: 2.0
+    longitude: 1.0
+    latitude: 1.0
+
+scaling:
+  scale_summary: true
+  summary_scaler: "minmax"
+  scale_coordinates: true
+  coordinate_scaler: "standard"
+
+cross_validation:
+  strategy: "GroupKFold"
+  n_splits: 5
+  group_column: "USERID"
+

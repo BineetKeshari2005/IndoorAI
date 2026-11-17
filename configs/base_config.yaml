@@ -1,0 +1,48 @@
+# ==============================================================================
+# IndoorAI - Base System Configuration
+# ==============================================================================
+
+system:
+  project_name: "IndoorAI"
+  version: "0.1.0"
+  random_seed: 42
+
+paths:
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  external_data_dir: "data/external"
+  experiment_dir: "experiments"
+  checkpoints_dir: "experiments/checkpoints"
+
+wifi_fingerprint:
+  # UJIIndoorLoc benchmark properties
+  num_waps: 520
+  raw_missing_rssi: 100        # UJIIndoorLoc denotes unobserved APs as +100
+  normalized_missing_rssi: -104 # IEEE standard signal floor
+  rssi_min: -104.0
+  rssi_max: 0.0
+  feature_scaling: "minmax"   # Options: minmax, standard, exponential, power
+
+sensor_fusion:
+  imu_sampling_rate_hz: 50
+  step_length_estimation: "weinberg" # Options: constant, weinberg, kim
+  ekf:
+    process_noise_pos: 0.05
+    process_noise_vel: 0.1
+    measurement_noise_wifi: 3.5  # Approximate meters
+  particle_filter:
+    num_particles: 500
+    resample_threshold: 0.5
+
+vision:
+  embedding_model: "resnet50" # Options: resnet50, efficientnet_b0
+  input_resolution: [224, 224]
+  object_detection_model: "yolov8m.pt"
+  privacy:
+    blur_faces: true
+    strip_exif: true
+
+multimodal:
+  fusion_strategy: "early_late_hybrid"
+  uncertainty_method: "monte_carlo_dropout" # Options: mc_dropout, evidential, ensemble
+

@@ -1,0 +1,55 @@
+# ==============================================================================
+# IndoorAI - Preprocessing Configuration
+# ==============================================================================
+
+pipeline:
+  dataset_name: "UJIIndoorLoc"
+  raw_data_dir: "data/raw/ujiindoorloc"
+  processed_data_dir: "data/processed/ujiindoorloc"
+  experiments_dir: "experiments/preprocessing"
+  artifacts_dir: "experiments/preprocessing/artifacts"
+
+duplicate_handling:
+  # Options:
+  #   - keep_all: Keep all records unchanged (Default baseline)
+  #   - remove_exact: Keep only the first occurrence of identical duplicate rows
+  #   - sample_weight: Group duplicates into unique fingerprints and assign frequency weight
+  strategy: "keep_all"
+
+wifi_signal:
+  # Sentinel value indicating unavailable access point in raw UJIIndoorLoc
+  unavailable_sentinel: 100
+  # Value to replace unavailable observations (below observed dataset minimum of -104 dBm)
+  rssi_floor_dbm: -105.0
+  # Valid physical signal range
+  rssi_min_valid_dbm: -104.0
+  rssi_max_valid_dbm: 0.0
+  # Feature representation options:
+  #   - rssi_only: 520 continuous features (with 100 replaced by rssi_floor_dbm)
+  #   - rssi_with_visibility: 1040 features (520 continuous RSSI + 520 binary *_VISIBLE flags)
+  feature_representation: "rssi_with_visibility"
+
+ap_filtering:
+  # Preserve complete 520-WAP schema for cross-dataset compatibility
+  drop_zero_variance: false
+  # Detections below this fraction of samples are flagged as low-visibility in quality report
+  low_visibility_threshold_pct: 0.1
+
+scaling:
+  # Options: standard, minmax, robust, none
+  method: "minmax"
+  # Target range for MinMaxScaler
+  feature_range: [0.0, 1.0]
+
+target_encoding:
+  building_column: "BUILDINGID"
+  floor_column: "FLOOR"
+  longitude_column: "LONGITUDE"
+  latitude_column: "LATITUDE"
+  create_composite_building_floor: true
+
+leakage_prevention:
+  strict_checks: true
+  assert_no_metadata_in_features: true
+  assert_no_target_in_features: true
+

@@ -1,0 +1,29 @@
+# ==============================================================================
+# IndoorAI - Dataset Configuration
+# ==============================================================================
+
+ujiindoorloc:
+  name: "UJIIndoorLoc"
+  source_page: "https://archive.ics.uci.edu/dataset/310/ujiindoorloc"
+  download_urls:
+    - "https://archive.ics.uci.edu/static/public/310/ujiindoorloc.zip"
+    - "https://archive.ics.uci.edu/ml/machine-learning-databases/00310/UJIIndoorLoc.zip"
+  target_raw_dir: "data/raw/ujiindoorloc"
+  archive_filename: "ujiindoorloc.zip"
+  expected_files:
+    - "trainingData.csv"
+    - "validationData.csv"
+  constants:
+    unavailable_wap_value: 100
+    expected_num_waps: 520
+    wap_prefix: "WAP"
+    building_column: "BUILDINGID"
+    floor_column: "FLOOR"
+    longitude_column: "LONGITUDE"
+    latitude_column: "LATITUDE"
+    space_id_column: "SPACEID"
+    relative_position_column: "RELATIVEPOSITION"
+    user_id_column: "USERID"
+    phone_id_column: "PHONEID"
+    timestamp_column: "TIMESTAMP"
+

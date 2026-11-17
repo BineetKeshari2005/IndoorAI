@@ -1,0 +1,56 @@
+# ==============================================================================
+# IndoorAI - Feature Engineering Configuration
+# ==============================================================================
+
+pipeline:
+  dataset_name: "UJIIndoorLoc"
+  raw_data_dir: "data/raw/ujiindoorloc"
+  processed_data_dir: "data/processed/ujiindoorloc"
+  feature_engineered_dir: "data/processed/ujiindoorloc/feature_engineered"
+  experiments_dir: "experiments/feature_engineering"
+  plots_dir: "experiments/feature_engineering/plots"
+
+signal_statistics:
+  enabled: true
+  unavailable_sentinel: 100
+  default_rssi_floor_dbm: -105.0
+  # Signal quality classification thresholds
+  strong_threshold_dbm: -60.0    # RSSI >= -60 dBm
+  medium_threshold_dbm: -80.0    # -80 dBm <= RSSI < -60 dBm
+  # Quantiles for signal distribution
+  quantiles: [0.25, 0.75]
+  # Strongest N access point ranks to extract
+  strongest_ranks: [1, 2, 3, 5]
+
+relative_features:
+  # Whether to generate per-AP relative signal differences
+  # If enabled, adds 520 diff_to_max features
+  enabled: false
+  diff_to_max: true
+  diff_to_mean: false
+  default_unavailable_diff: 0.0
+
+feature_selection:
+  # Strategy options:
+  #   - all: Retain all features (baseline default)
+  #   - remove_constant: Drop zero-variance features identified on training split
+  #   - min_detection_count: Drop APs detected in fewer than min_count training samples
+  #   - variance_threshold: Drop features with variance below threshold
+  strategy: "all"
+  min_detection_count: 10
+  min_detection_pct: 0.05
+  variance_threshold: 0.001
+
+scaling:
+  # Scale newly engineered summary statistics using training-only statistics
+  # Defaults to false so summary features preserve physical interpretable units (dBm, counts)
+  # and mathematical invariants hold on the parquet files directly.
+  enabled: false
+  method: "minmax"
+  feature_range: [0.0, 1.0]
+
+leakage_prevention:
+  strict_checks: true
+  assert_no_metadata_in_features: true
+  assert_no_target_in_features: true
+

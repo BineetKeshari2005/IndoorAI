@@ -1,0 +1,9 @@
+{
+  "strategy": "keep_all",
+  "input_rows": 19937,
+  "output_rows": 19937,
+  "duplicates_detected": 637,
+  "rows_removed": 0,
+  "sample_weight_column_added": true,
+  "notes": "All records preserved. Default sample_weight=1.0 assigned to every row."
+}

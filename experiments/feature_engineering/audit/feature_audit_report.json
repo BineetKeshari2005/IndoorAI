@@ -1,0 +1,175 @@
+{
+  "audit_title": "IndoorAI Wi-Fi Feature Engineering Numerical Audit",
+  "audit_timestamp": "2026-11-16T06:14:51.208759+00:00",
+  "dimension_verification": {
+    "training_shape": [
+      19937,
+      1058
+    ],
+    "validation_shape": [
+      1111,
+      1058
+    ],
+    "total_features": 1058,
+    "rssi_feature_count": 520,
+    "visibility_feature_count": 520,
+    "summary_feature_count": 18,
+    "identical_schema_and_order": true,
+    "is_correct_dimension": true,
+    "forbidden_metadata_leaks_train": [],
+    "forbidden_metadata_leaks_val": [],
+    "zero_leakage": true
+  },
+  "inconsistency_investigation": {
+    "rssi_std": {
+      "markdown_report_value": 8.85,
+      "json_summary_value": 10.53,
+      "recalculated_true_value": 10.53,
+      "matches_json_summary": true,
+      "discrepancy_vs_markdown": 1.68,
+      "explanation": "The Markdown report transcribed a single-AP / strongest AP standard deviation (8.85 dB). The actual per-sample population standard deviation is 10.53 dB (sample std with ddof=1 is 10.89 dB)."
+    },
+    "rssi_median": {
+      "markdown_report_value": -78.83,
+      "json_summary_value": -81.009,
+      "recalculated_true_value": -81.009,
+      "matches_json_summary": true,
+      "discrepancy_vs_markdown": -2.179,
+      "explanation": "The Markdown report mistakenly copied the median of mean RSSI (-78.83 dBm) instead of the mean of median RSSI (-81.01 dBm). True physical value is -81.01 dBm."
+    },
+    "strong_signal_count": {
+      "markdown_report_value": 3.19,
+      "json_summary_value": 1.7562,
+      "recalculated_true_value": 1.7562,
+      "matches_json_summary": true,
+      "discrepancy_vs_markdown": -1.4338,
+      "explanation": "The Markdown report contained an unverified placeholder (3.19). With documented threshold RSSI >= -60 dBm, the true physical mean is 1.76 APs."
+    },
+    "medium_signal_count": {
+      "markdown_report_value": 8.68,
+      "json_summary_value": 6.6446,
+      "recalculated_true_value": 6.6446,
+      "matches_json_summary": true,
+      "discrepancy_vs_markdown": -2.0354,
+      "explanation": "The Markdown report contained an unverified placeholder (8.68). With documented range [-80 dBm, -60 dBm), the true physical mean is 6.64 APs."
+    },
+    "weak_signal_count": {
+      "markdown_report_value": 6.13,
+      "json_summary_value": 9.594,
+      "recalculated_true_value": 9.594,
+      "matches_json_summary": true,
+      "discrepancy_vs_markdown": 3.464,
+      "explanation": "The Markdown report contained an unverified placeholder (6.13). With documented threshold RSSI < -80 dBm, the true physical mean is 9.59 APs."
+    }
+  },
+  "invariant_verification": {
+    "training": {
+      "total_samples": 19937,
+      "invariant_A_sum_bands_equals_visible": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_B_strongest_1_equals_max": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_C_visible_plus_unavailable_is_520": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_D_ratio_equals_visible_div_520": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_E_range_equals_max_minus_min": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_F_ordered_signal_ranks": {
+        "violations": 0,
+        "passed": true
+      },
+      "all_invariants_passed": true
+    },
+    "validation": {
+      "total_samples": 1111,
+      "invariant_A_sum_bands_equals_visible": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_B_strongest_1_equals_max": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_C_visible_plus_unavailable_is_520": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_D_ratio_equals_visible_div_520": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_E_range_equals_max_minus_min": {
+        "violations": 0,
+        "max_diff": 0.0,
+        "passed": true
+      },
+      "invariant_F_ordered_signal_ranks": {
+        "violations": 0,
+        "passed": true
+      },
+      "all_invariants_passed": true
+    }
+  },
+  "ap_statistics_verification": {
+    "total_aps_analyzed": 520,
+    "active_ap_count": 465,
+    "constant_unobserved_ap_count": 55,
+    "max_detection_count_diff_vs_task03": 0,
+    "max_mean_rssi_diff_vs_task03": 0.0,
+    "task03_task05_artifacts_match_100_percent": true,
+    "top_5_most_detected_aps": [
+      {
+        "ap_name": "WAP496",
+        "train_detection_count": 4750,
+        "train_detection_pct": 23.825,
+        "mean_rssi": -76.304
+      },
+      {
+        "ap_name": "WAP087",
+        "train_detection_count": 4673,
+        "train_detection_pct": 23.4388,
+        "mean_rssi": -82.898
+      },
+      {
+        "ap_name": "WAP502",
+        "train_detection_count": 4637,
+        "train_detection_pct": 23.2583,
+        "mean_rssi": -76.424
+      },
+      {
+        "ap_name": "WAP517",
+        "train_detection_count": 4543,
+        "train_detection_pct": 22.7868,
+        "mean_rssi": -76.024
+      },
+      {
+        "ap_name": "WAP078",
+        "train_detection_count": 4479,
+        "train_detection_pct": 22.4658,
+        "mean_rssi": -82.919
+      }
+    ],
+    "markdown_discrepancy_explanation": "The CSV artifacts in Task 03 (ap_analysis.csv) and Task 05 (ap_statistics.csv) have always been 100% identical and mathematically correct. The discrepancy arose exclusively from an inaccurate narrative text in docs/WIFI_FEATURE_ENGINEERING.md which stated WAP248 (6380), WAP517 (6211), and WAP251 (5901). The true #1 AP is WAP496 (4,750 detections, 23.83%)."
+  },
+  "overall_verdict": "PASSED"
+}

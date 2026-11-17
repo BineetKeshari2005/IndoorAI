@@ -1,0 +1,36 @@
+{
+  "dataset_name": "UJIIndoorLoc",
+  "official_source": "https://archive.ics.uci.edu/dataset/310/ujiindoorloc",
+  "splits": {
+    "training": {
+      "filename": "trainingData.csv",
+      "rows": 19937,
+      "columns": 529,
+      "memory_mb": 80.46
+    },
+    "validation": {
+      "filename": "validationData.csv",
+      "rows": 1111,
+      "columns": 529,
+      "memory_mb": 4.48
+    },
+    "combined_total_rows": 21048
+  },
+  "feature_composition": {
+    "wap_columns_count": 520,
+    "context_columns_count": 9,
+    "context_column_names": [
+      "LONGITUDE",
+      "LATITUDE",
+      "FLOOR",
+      "BUILDINGID",
+      "SPACEID",
+      "RELATIVEPOSITION",
+      "USERID",
+      "PHONEID",
+      "TIMESTAMP"
+    ],
+    "wap_prefix": "WAP",
+    "unavailable_wap_sentinel_value": 100
+  }
+}

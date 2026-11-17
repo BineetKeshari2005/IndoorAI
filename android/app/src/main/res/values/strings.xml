@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IndoorAI</string>
+    <string name="app_tagline">Multimodal Indoor Localization &amp; Spatial Mapping</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_wifi">Wi-Fi</string>
+    <string name="nav_sensors">Sensors</string>
+    <string name="nav_camera">Camera</string>
+    <string name="nav_session">Session</string>
+    <string name="nav_permissions">Permissions</string>
+</resources>
+

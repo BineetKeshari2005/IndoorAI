@@ -1,0 +1,56 @@
+cross_validation:
+  group_column: USERID
+  n_splits: 5
+  random_state: 42
+  shuffle: true
+  strategy: StratifiedGroupKFold
+  stratify_column: BUILDING_FLOOR_INDEX
+data:
+  encoders: experiments/preprocessing/artifacts/target_encoders.json
+  metadata:
+    train: data/processed/ujiindoorloc/metadata_train.parquet
+    val: data/processed/ujiindoorloc/metadata_validation.parquet
+  processed_dir: data/processed/ujiindoorloc
+  targets:
+    train: data/processed/ujiindoorloc/y_train.parquet
+    val: data/processed/ujiindoorloc/y_validation.parquet
+  variant_a:
+    description: 520 RSSI features + 520 binary AP visibility features
+    feature_count: 1040
+    name: variant_a_basic
+    train_features: data/processed/ujiindoorloc/X_train.parquet
+    val_features: data/processed/ujiindoorloc/X_validation.parquet
+  variant_b:
+    description: 520 RSSI features + 520 binary AP visibility features + 18 signal
+      summary statistics
+    feature_count: 1058
+    name: variant_b_engineered
+    train_features: data/processed/ujiindoorloc/feature_engineered/X_train_engineered.parquet
+    val_features: data/processed/ujiindoorloc/feature_engineered/X_validation_engineered.parquet
+experiment:
+  configs_dir: experiments/random_forest/configs
+  experiment_dir: experiments/random_forest
+  metrics_dir: experiments/random_forest/metrics
+  models_dir: experiments/random_forest/models
+  name: random_forest_baseline
+  plots_dir: experiments/random_forest/plots
+  predictions_dir: experiments/random_forest/predictions
+  reports_dir: experiments/random_forest/reports
+  seed: 42
+models:
+  classifier:
+    max_depth: null
+    max_features: sqrt
+    min_samples_leaf: 1
+    min_samples_split: 2
+    n_estimators: 200
+    n_jobs: -1
+    random_state: 42
+  regressor:
+    max_depth: null
+    max_features: sqrt
+    min_samples_leaf: 1
+    min_samples_split: 2
+    n_estimators: 200
+    n_jobs: -1
+    random_state: 42

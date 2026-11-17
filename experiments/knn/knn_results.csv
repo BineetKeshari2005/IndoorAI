@@ -1,0 +1,7 @@
+Model Head,Target,Metric 1,Metric 2,Metric 3
+Model A: Building,BUILDINGID,Accuracy: 99.91%,F1-Macro: 0.9988,F1-Weighted: 0.9991
+Model B: Floor,FLOOR,Accuracy: 84.43%,F1-Macro: 0.8311,F1-Weighted: 0.8460
+Model C: Building-Floor,BUILDING_FLOOR_INDEX,Accuracy: 84.43%,F1-Macro: 0.8216,F1-Weighted: 0.8465
+Model D: Longitude,LONGITUDE,MAE: 6.71,RMSE: 10.17,R²: 0.9928
+Model E: Latitude,LATITUDE,MAE: 6.10,RMSE: 9.52,R²: 0.9816
+Composite: 2D Coordinates,"(LONGITUDE, LATITUDE)",Mean Error: 10.05,Median Error: 7.33,95th % Error: 29.06

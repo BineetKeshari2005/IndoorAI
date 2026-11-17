@@ -1,0 +1,4 @@
+building_id,sample_count,rf_building_accuracy,knn_building_accuracy,rf_building_errors,knn_building_errors,rf_floor_accuracy,knn_floor_accuracy,rf_floor_errors,knn_floor_errors
+0,536,99.81,100.0,1,0,95.34,90.3,25,52
+1,307,99.67,100.0,1,0,78.18,74.92,67,77
+2,268,100.0,99.63,0,1,87.31,83.58,34,44

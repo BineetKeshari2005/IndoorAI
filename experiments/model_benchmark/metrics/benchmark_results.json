@@ -1,0 +1,708 @@
+{
+  "benchmark_name": "indoorai_model_benchmark_task09",
+  "timestamp": "2026-11-16 18:24:38",
+  "validation_samples": 1111,
+  "validation_sample_alignment": {
+    "is_aligned": true,
+    "sample_count": 1111,
+    "building_mismatches": 0,
+    "floor_mismatches": 0,
+    "max_longitude_diff": 0.0,
+    "max_latitude_diff": 0.0
+  },
+  "dataset_device_audit": {
+    "training": {
+      "sample_count": 19937,
+      "distinct_user_count": 18,
+      "user_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "distinct_phone_count": 16,
+      "phone_ids": [
+        1,
+        3,
+        6,
+        7,
+        8,
+        10,
+        11,
+        13,
+        14,
+        16,
+        17,
+        18,
+        19,
+        22,
+        23,
+        24
+      ],
+      "min_phone_id": 1,
+      "max_phone_id": 24
+    },
+    "validation": {
+      "sample_count": 1111,
+      "distinct_user_count": 1,
+      "user_ids": [
+        0
+      ],
+      "distinct_phone_count": 11,
+      "phone_ids": [
+        0,
+        2,
+        4,
+        5,
+        9,
+        12,
+        13,
+        14,
+        15,
+        20,
+        21
+      ],
+      "min_phone_id": 0,
+      "max_phone_id": 21
+    },
+    "comparison": {
+      "total_distinct_phones_combined": 25,
+      "union_phone_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "shared_phone_count": 2,
+      "shared_phone_ids": [
+        13,
+        14
+      ],
+      "train_only_phone_count": 14,
+      "train_only_phone_ids": [
+        1,
+        3,
+        6,
+        7,
+        8,
+        10,
+        11,
+        16,
+        17,
+        18,
+        19,
+        22,
+        23,
+        24
+      ],
+      "val_only_phone_count": 9,
+      "val_only_phone_ids": [
+        0,
+        2,
+        4,
+        5,
+        9,
+        12,
+        15,
+        20,
+        21
+      ]
+    },
+    "discrepancy_resolution": {
+      "explanation": "The training set contains exactly 16 distinct PHONEIDs, not 24. The maximum PHONEID in the training set is 24, but ID numbers 0, 2, 4, 5, 9, 12, 15, 20, 21 are absent in trainingData.csv. Earlier mentions of '24 phones' conflated max(PHONEID)=24 with count(distinct(PHONEID))=16. Across the entire dataset (train + val), there are exactly 25 distinct PHONEIDs (0-24). Validation contains 1 single user (USERID 0) who collected data across 11 distinct phones, of which 9 were completely unseen in training."
+    }
+  },
+  "knn_selection_audit": {
+    "selection_formula": "lexicographic_sort(by=['mean_euclidean_error', 'mean_bf_acc'], ascending=[True, False])",
+    "primary_objective": "mean_euclidean_error (ascending)",
+    "secondary_objective": "mean_bf_acc (descending)",
+    "k7_metrics": {
+      "k": 7,
+      "mean_euclidean_error": 10.03966066065799,
+      "std_euclidean_error": 2.005178226332988,
+      "mean_bf_acc": 83.03047904748234,
+      "std_bf_acc": 6.143596448440005,
+      "median_euclidean_error": 6.768142982580724
+    },
+    "k11_metrics": {
+      "k": 11,
+      "mean_euclidean_error": 10.043429158432184,
+      "std_euclidean_error": 2.000167803721285,
+      "mean_bf_acc": 83.16611938628382,
+      "std_bf_acc": 5.63878209015869,
+      "median_euclidean_error": 6.8536244528759935
+    },
+    "k5_metrics": {
+      "k": 5,
+      "mean_euclidean_error": 10.092441917645495,
+      "std_euclidean_error": 2.0137876439284956,
+      "mean_bf_acc": 83.19230785582963,
+      "std_bf_acc": 6.006427635517211,
+      "median_euclidean_error": 6.74472017433664
+    },
+    "explanation": "In Task 08, the model selection objective was a multi-objective lexicographic sort: Primary objective: Minimize mean_euclidean_error (ascending). Secondary objective (tie-breaker): Maximize mean_bf_acc (descending). At full float precision, k=7 achieved the global minimum mean_euclidean_error of 10.039661 units across all 60 configurations tested, beating k=11 (10.043429 units) and k=5 (10.092442 units). Because k=7 achieved the lowest continuous spatial error, it was ranked #1 without reaching the tie-breaker. In the Task 08 markdown summary table, rounding mean Euclidean error to 2 decimal places rendered both k=7 and k=11 as '10.04', giving the false appearance of a tie. Furthermore, the difference between k=7's accuracy (83.03%) and k=5's accuracy (83.19%) is only 0.16%, which is well within the cross-validation standard deviation of +/-6.14%. Therefore, k=7 is mathematically the correct top configuration for spatial coordinate estimation."
+  },
+  "recalculated_metrics": {
+    "random_forest": {
+      "model_name": "Random Forest",
+      "sample_count": 1111,
+      "building": {
+        "accuracy_pct": 99.82,
+        "precision_macro": 0.9983,
+        "recall_macro": 0.9983,
+        "f1_macro": 0.9983,
+        "f1_weighted": 0.9982
+      },
+      "floor": {
+        "accuracy_pct": 88.66,
+        "precision_macro": 0.8951,
+        "recall_macro": 0.8518,
+        "f1_macro": 0.8668,
+        "f1_weighted": 0.887
+      },
+      "building_floor": {
+        "accuracy_pct": 88.48,
+        "precision_macro": 0.8827,
+        "recall_macro": 0.8661,
+        "f1_macro": 0.8641,
+        "f1_weighted": 0.8861
+      },
+      "coordinates": {
+        "longitude": {
+          "mae": 7.947,
+          "rmse": 11.7883,
+          "medae": 5.3702,
+          "r2": 0.9904
+        },
+        "latitude": {
+          "mae": 6.7537,
+          "rmse": 10.2977,
+          "medae": 4.1269,
+          "r2": 0.9785
+        },
+        "euclidean_error": {
+          "unit": "dataset_coordinate_units",
+          "mean": 11.5284,
+          "median": 8.6539,
+          "std": 10.5879,
+          "min": 0.239,
+          "max": 115.1781,
+          "q25": 4.6536,
+          "q75": 15.1963,
+          "q90": 24.5389,
+          "q95": 32.7401
+        }
+      }
+    },
+    "knn": {
+      "model_name": "k-Nearest Neighbors",
+      "sample_count": 1111,
+      "building": {
+        "accuracy_pct": 99.91,
+        "precision_macro": 0.9989,
+        "recall_macro": 0.9988,
+        "f1_macro": 0.9988,
+        "f1_weighted": 0.9991
+      },
+      "floor": {
+        "accuracy_pct": 84.43,
+        "precision_macro": 0.8442,
+        "recall_macro": 0.8323,
+        "f1_macro": 0.8311,
+        "f1_weighted": 0.846
+      },
+      "building_floor": {
+        "accuracy_pct": 84.43,
+        "precision_macro": 0.8274,
+        "recall_macro": 0.8405,
+        "f1_macro": 0.8215,
+        "f1_weighted": 0.8465
+      },
+      "coordinates": {
+        "longitude": {
+          "mae": 6.7137,
+          "rmse": 10.1667,
+          "medae": 4.3684,
+          "r2": 0.9928
+        },
+        "latitude": {
+          "mae": 6.0986,
+          "rmse": 9.5187,
+          "medae": 3.6199,
+          "r2": 0.9816
+        },
+        "euclidean_error": {
+          "unit": "dataset_coordinate_units",
+          "mean": 10.0457,
+          "median": 7.3334,
+          "std": 9.6463,
+          "min": 0.0,
+          "max": 68.0176,
+          "q25": 3.6931,
+          "q75": 12.5389,
+          "q90": 21.144,
+          "q95": 29.0593
+        }
+      }
+    }
+  },
+  "operational_metrics": {
+    "random_forest": {
+      "size_mb": 561.06,
+      "latency_ms_per_sample": 0.121,
+      "feature_count": 1058,
+      "feature_variant": "variant_b_engineered"
+    },
+    "knn": {
+      "size_mb": 17.68,
+      "latency_ms_per_sample": 1.192,
+      "feature_count": 1058,
+      "feature_variant": "variant_b_engineered (scaled)"
+    }
+  },
+  "hierarchical_comparison": {
+    "by_building": {
+      "building_0": {
+        "sample_count": 536,
+        "sample_pct": 48.24,
+        "rf": {
+          "building_acc": 99.81,
+          "floor_acc": 95.34,
+          "bf_acc": 94.96,
+          "euclidean_mean": 8.98,
+          "euclidean_median": 6.81,
+          "euclidean_q95": 23.19
+        },
+        "knn": {
+          "building_acc": 100.0,
+          "floor_acc": 90.3,
+          "bf_acc": 90.3,
+          "euclidean_mean": 7.91,
+          "euclidean_median": 6.23,
+          "euclidean_q95": 19.59
+        },
+        "diff_knn_minus_rf": {
+          "building_acc": 0.19,
+          "floor_acc": -5.04,
+          "bf_acc": -4.66,
+          "euclidean_mean": -1.06,
+          "euclidean_median": -0.59
+        },
+        "winner": {
+          "floor": "Random Forest",
+          "coordinates": "k-NN"
+        }
+      },
+      "building_1": {
+        "sample_count": 307,
+        "sample_pct": 27.63,
+        "rf": {
+          "building_acc": 99.67,
+          "floor_acc": 78.18,
+          "bf_acc": 78.5,
+          "euclidean_mean": 12.03,
+          "euclidean_median": 9.32,
+          "euclidean_q95": 33.49
+        },
+        "knn": {
+          "building_acc": 100.0,
+          "floor_acc": 74.92,
+          "bf_acc": 74.92,
+          "euclidean_mean": 10.75,
+          "euclidean_median": 8.06,
+          "euclidean_q95": 28.69
+        },
+        "diff_knn_minus_rf": {
+          "building_acc": 0.33,
+          "floor_acc": -3.26,
+          "bf_acc": -3.58,
+          "euclidean_mean": -1.27,
+          "euclidean_median": -1.26
+        },
+        "winner": {
+          "floor": "Random Forest",
+          "coordinates": "k-NN"
+        }
+      },
+      "building_2": {
+        "sample_count": 268,
+        "sample_pct": 24.12,
+        "rf": {
+          "building_acc": 100.0,
+          "floor_acc": 87.31,
+          "bf_acc": 86.94,
+          "euclidean_mean": 16.06,
+          "euclidean_median": 12.39,
+          "euclidean_q95": 38.3
+        },
+        "knn": {
+          "building_acc": 99.63,
+          "floor_acc": 83.58,
+          "bf_acc": 83.58,
+          "euclidean_mean": 13.5,
+          "euclidean_median": 8.63,
+          "euclidean_q95": 44.21
+        },
+        "diff_knn_minus_rf": {
+          "building_acc": -0.37,
+          "floor_acc": -3.73,
+          "bf_acc": -3.36,
+          "euclidean_mean": -2.56,
+          "euclidean_median": -3.77
+        },
+        "winner": {
+          "floor": "Random Forest",
+          "coordinates": "k-NN"
+        }
+      }
+    },
+    "by_floor": {
+      "floor_0": {
+        "sample_count": 132,
+        "sample_pct": 11.88,
+        "rf": {
+          "floor_acc": 87.88,
+          "bf_acc": 87.88,
+          "euclidean_mean": 11.7,
+          "euclidean_median": 9.06
+        },
+        "knn": {
+          "floor_acc": 88.64,
+          "bf_acc": 88.64,
+          "euclidean_mean": 10.59,
+          "euclidean_median": 8.04
+        },
+        "diff_knn_minus_rf": {
+          "floor_acc": 0.76,
+          "bf_acc": 0.76,
+          "euclidean_mean": -1.12,
+          "euclidean_median": -1.02
+        },
+        "winner": {
+          "floor": "k-NN",
+          "coordinates": "k-NN"
+        }
+      },
+      "floor_1": {
+        "sample_count": 462,
+        "sample_pct": 41.58,
+        "rf": {
+          "floor_acc": 88.53,
+          "bf_acc": 87.01,
+          "euclidean_mean": 10.54,
+          "euclidean_median": 7.46
+        },
+        "knn": {
+          "floor_acc": 82.25,
+          "bf_acc": 82.25,
+          "euclidean_mean": 8.88,
+          "euclidean_median": 6.41
+        },
+        "diff_knn_minus_rf": {
+          "floor_acc": -6.28,
+          "bf_acc": -4.76,
+          "euclidean_mean": -1.66,
+          "euclidean_median": -1.04
+        },
+        "winner": {
+          "floor": "Random Forest",
+          "coordinates": "k-NN"
+        }
+      },
+      "floor_2": {
+        "sample_count": 306,
+        "sample_pct": 27.54,
+        "rf": {
+          "floor_acc": 89.22,
+          "bf_acc": 90.52,
+          "euclidean_mean": 12.02,
+          "euclidean_median": 9.2
+        },
+        "knn": {
+          "floor_acc": 83.01,
+          "bf_acc": 83.01,
+          "euclidean_mean": 11.15,
+          "euclidean_median": 8.08
+        },
+        "diff_knn_minus_rf": {
+          "floor_acc": -6.21,
+          "bf_acc": -7.52,
+          "euclidean_mean": -0.87,
+          "euclidean_median": -1.13
+        },
+        "winner": {
+          "floor": "Random Forest",
+          "coordinates": "k-NN"
+        }
+      },
+      "floor_3": {
+        "sample_count": 172,
+        "sample_pct": 15.48,
+        "rf": {
+          "floor_acc": 93.6,
+          "bf_acc": 93.6,
+          "euclidean_mean": 10.55,
+          "euclidean_median": 8.56
+        },
+        "knn": {
+          "floor_acc": 93.02,
+          "bf_acc": 93.02,
+          "euclidean_mean": 9.38,
+          "euclidean_median": 7.05
+        },
+        "diff_knn_minus_rf": {
+          "floor_acc": -0.58,
+          "bf_acc": -0.58,
+          "euclidean_mean": -1.17,
+          "euclidean_median": -1.51
+        },
+        "winner": {
+          "floor": "Random Forest",
+          "coordinates": "k-NN"
+        }
+      },
+      "floor_4": {
+        "sample_count": 39,
+        "sample_pct": 3.51,
+        "rf": {
+          "floor_acc": 66.67,
+          "bf_acc": 69.23,
+          "euclidean_mean": 23.04,
+          "euclidean_median": 16.35
+        },
+        "knn": {
+          "floor_acc": 69.23,
+          "bf_acc": 69.23,
+          "euclidean_mean": 16.29,
+          "euclidean_median": 12.09
+        },
+        "diff_knn_minus_rf": {
+          "floor_acc": 2.56,
+          "bf_acc": 0.0,
+          "euclidean_mean": -6.75,
+          "euclidean_median": -4.26
+        },
+        "winner": {
+          "floor": "k-NN",
+          "coordinates": "k-NN"
+        }
+      }
+    }
+  },
+  "error_diagnostics": {
+    "floor_overlap": {
+      "both_correct_count": 908,
+      "both_correct_pct": 81.73,
+      "both_wrong_count": 96,
+      "both_wrong_pct": 8.64,
+      "rf_only_correct_count": 77,
+      "rf_only_correct_pct": 6.93,
+      "knn_only_correct_count": 30,
+      "knn_only_correct_pct": 2.7,
+      "potential_oracle_ensemble_acc": 91.36
+    },
+    "difficult_regions": {
+      "building_distribution_of_mutual_failures": {
+        "building_1": 53,
+        "building_2": 27,
+        "building_0": 16
+      },
+      "floor_distribution_of_mutual_failures": {
+        "floor_1": 47,
+        "floor_2": 18,
+        "floor_0": 13,
+        "floor_4": 11,
+        "floor_3": 7
+      }
+    },
+    "by_phone": {
+      "0": {
+        "sample_count": 120,
+        "seen_in_train": false,
+        "rf_floor_acc": 85.83,
+        "knn_floor_acc": 75.0,
+        "rf_euclidean_mean": 11.77,
+        "knn_euclidean_mean": 8.64,
+        "rf_euclidean_median": 7.27,
+        "knn_euclidean_median": 6.35,
+        "coord_winner": "k-NN"
+      },
+      "2": {
+        "sample_count": 52,
+        "seen_in_train": false,
+        "rf_floor_acc": 80.77,
+        "knn_floor_acc": 76.92,
+        "rf_euclidean_mean": 12.06,
+        "knn_euclidean_mean": 9.52,
+        "rf_euclidean_median": 6.24,
+        "knn_euclidean_median": 6.72,
+        "coord_winner": "k-NN"
+      },
+      "4": {
+        "sample_count": 69,
+        "seen_in_train": false,
+        "rf_floor_acc": 89.86,
+        "knn_floor_acc": 88.41,
+        "rf_euclidean_mean": 8.06,
+        "knn_euclidean_mean": 7.4,
+        "rf_euclidean_median": 5.94,
+        "knn_euclidean_median": 5.35,
+        "coord_winner": "k-NN"
+      },
+      "5": {
+        "sample_count": 17,
+        "seen_in_train": false,
+        "rf_floor_acc": 70.59,
+        "knn_floor_acc": 70.59,
+        "rf_euclidean_mean": 10.81,
+        "knn_euclidean_mean": 10.34,
+        "rf_euclidean_median": 6.31,
+        "knn_euclidean_median": 8.64,
+        "coord_winner": "k-NN"
+      },
+      "9": {
+        "sample_count": 77,
+        "seen_in_train": false,
+        "rf_floor_acc": 92.21,
+        "knn_floor_acc": 88.31,
+        "rf_euclidean_mean": 7.02,
+        "knn_euclidean_mean": 6.81,
+        "rf_euclidean_median": 6.11,
+        "knn_euclidean_median": 5.25,
+        "coord_winner": "k-NN"
+      },
+      "12": {
+        "sample_count": 70,
+        "seen_in_train": false,
+        "rf_floor_acc": 91.43,
+        "knn_floor_acc": 84.29,
+        "rf_euclidean_mean": 12.47,
+        "knn_euclidean_mean": 10.89,
+        "rf_euclidean_median": 11.77,
+        "knn_euclidean_median": 8.43,
+        "coord_winner": "k-NN"
+      },
+      "13": {
+        "sample_count": 369,
+        "seen_in_train": true,
+        "rf_floor_acc": 89.97,
+        "knn_floor_acc": 88.35,
+        "rf_euclidean_mean": 9.76,
+        "knn_euclidean_mean": 8.07,
+        "rf_euclidean_median": 6.8,
+        "knn_euclidean_median": 5.81,
+        "coord_winner": "k-NN"
+      },
+      "14": {
+        "sample_count": 28,
+        "seen_in_train": true,
+        "rf_floor_acc": 75.0,
+        "knn_floor_acc": 75.0,
+        "rf_euclidean_mean": 27.48,
+        "knn_euclidean_mean": 17.2,
+        "rf_euclidean_median": 20.43,
+        "knn_euclidean_median": 14.03,
+        "coord_winner": "k-NN"
+      },
+      "15": {
+        "sample_count": 36,
+        "seen_in_train": false,
+        "rf_floor_acc": 91.67,
+        "knn_floor_acc": 86.11,
+        "rf_euclidean_mean": 8.53,
+        "knn_euclidean_mean": 8.15,
+        "rf_euclidean_median": 8.49,
+        "knn_euclidean_median": 8.51,
+        "coord_winner": "k-NN"
+      },
+      "20": {
+        "sample_count": 213,
+        "seen_in_train": false,
+        "rf_floor_acc": 88.26,
+        "knn_floor_acc": 83.1,
+        "rf_euclidean_mean": 14.63,
+        "knn_euclidean_mean": 14.89,
+        "rf_euclidean_median": 13.05,
+        "knn_euclidean_median": 11.06,
+        "coord_winner": "Random Forest"
+      },
+      "21": {
+        "sample_count": 60,
+        "seen_in_train": false,
+        "rf_floor_acc": 95.0,
+        "knn_floor_acc": 88.33,
+        "rf_euclidean_mean": 13.69,
+        "knn_euclidean_mean": 12.13,
+        "rf_euclidean_median": 11.07,
+        "knn_euclidean_median": 9.2,
+        "coord_winner": "k-NN"
+      }
+    }
+  },
+  "model_recommendations": {
+    "building_identification": {
+      "selected_model": "k-Nearest Neighbors (k-NN) / Random Forest (Tie)",
+      "recommended_primary": "k-NN",
+      "justification": "Both models achieve near-perfect building identification on the validation split (k-NN: 99.91%, RF: 99.82%), with k-NN having only a single misclassified sample across all 1,111 queries. Because k-NN's model artifact is 96.8% smaller (3.5 MB vs 2.7 MB for building head, 17.7 MB total suite vs 561 MB), k-NN is favored for edge deployment."
+    },
+    "floor_identification": {
+      "selected_model": "Random Forest",
+      "recommended_primary": "Random Forest",
+      "justification": "Random Forest significantly outperforms k-NN in floor classification (+4.23% higher accuracy: 88.66% vs 84.43%, and +4.05% higher combined building-floor accuracy: 88.48% vs 84.43%). Decision trees construct axis-aligned orthogonal partitions that effectively capture the non-linear, sharp signal attenuation caused by reinforced concrete floor slabs. In contrast, k-NN calculates isotropic distance neighborhoods in high-dimensional signal space, which suffer from vertical signal bleed between adjacent floors."
+    },
+    "coordinate_prediction": {
+      "selected_model": "k-Nearest Neighbors (k-NN)",
+      "recommended_primary": "k-NN",
+      "justification": "k-NN decisively outperforms Random Forest in 2D spatial coordinate estimation: Mean 2D Euclidean Error is 10.05 units vs 11.53 units (-1.48 units / 12.8% error reduction); Median Euclidean Error is 7.33 units vs 8.65 units (-1.32 units / 15.3% error reduction); 95th percentile error bound is 29.06 units vs 32.74 units (-3.68 units tighter bound); and maximum error is 68.02 units vs 115.18 units. Because indoor coordinate space is continuous, distance-weighted interpolation between the 7 most similar spatial neighbors produces smooth coordinate estimates, whereas decision tree ensembles produce step-function boundary artifacts."
+    },
+    "hybrid_architecture_proposal": {
+      "concept": "Two-Stage Hierarchical Hybrid Localization",
+      "description": "Stage 1 (Macro Structural): Use Random Forest (or a multitask deep network in Task 10) to predict Building ID and Floor ID. Stage 2 (Micro Metric): Filter the k-NN historical fingerprint database strictly to the predicted Building and Floor, and perform distance-weighted k-NN interpolation for (x, y) coordinates. This eliminates floor-slab ambiguity while preserving continuous spatial precision.",
+      "status": "Recommended for implementation in later Phase 2 / Phase 3 integration tasks."
+    }
+  },
+  "generated_artifacts": {
+    "comparison_csv": "experiments/model_benchmark/metrics/benchmark_comparison.csv",
+    "plots": [
+      "experiments/model_benchmark/plots/model_accuracy_comparison.png",
+      "experiments/model_benchmark/plots/coordinate_error_comparison.png",
+      "experiments/model_benchmark/plots/building_floor_comparison.png"
+    ],
+    "report_md": "experiments/model_benchmark/reports/model_benchmark_report.md"
+  }
+}

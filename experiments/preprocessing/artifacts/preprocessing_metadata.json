@@ -1,0 +1,30 @@
+{
+  "dataset_name": "UJIIndoorLoc",
+  "execution_epoch_ms": 1794807185398,
+  "duplicate_strategy": "keep_all",
+  "raw_train_rows": 19937,
+  "raw_val_rows": 1111,
+  "processed_train_rows": 19937,
+  "processed_val_rows": 1111,
+  "input_feature_count": 1040,
+  "feature_representation": "rssi_with_visibility",
+  "rssi_floor_dbm": -105.0,
+  "scaling_method": "minmax",
+  "num_constant_training_waps": 55,
+  "output_files": {
+    "X_train": "/Users/bineetkeshari/Desktop/IndoorAI/data/processed/ujiindoorloc/X_train.parquet",
+    "X_validation": "/Users/bineetkeshari/Desktop/IndoorAI/data/processed/ujiindoorloc/X_validation.parquet",
+    "y_train": "/Users/bineetkeshari/Desktop/IndoorAI/data/processed/ujiindoorloc/y_train.parquet",
+    "y_validation": "/Users/bineetkeshari/Desktop/IndoorAI/data/processed/ujiindoorloc/y_validation.parquet",
+    "metadata_train": "/Users/bineetkeshari/Desktop/IndoorAI/data/processed/ujiindoorloc/metadata_train.parquet",
+    "metadata_validation": "/Users/bineetkeshari/Desktop/IndoorAI/data/processed/ujiindoorloc/metadata_validation.parquet"
+  },
+  "artifacts": {
+    "scaler": "/Users/bineetkeshari/Desktop/IndoorAI/experiments/preprocessing/artifacts/scaler.joblib",
+    "target_encoders": "/Users/bineetkeshari/Desktop/IndoorAI/experiments/preprocessing/artifacts/target_encoders.json",
+    "ap_feature_quality": "/Users/bineetkeshari/Desktop/IndoorAI/experiments/preprocessing/ap_feature_quality.csv",
+    "duplicate_report": "/Users/bineetkeshari/Desktop/IndoorAI/experiments/preprocessing/duplicate_handling_report.json",
+    "validation_report": "/Users/bineetkeshari/Desktop/IndoorAI/experiments/preprocessing/validation_report.json"
+  },
+  "leakage_checks_passed": true
+}

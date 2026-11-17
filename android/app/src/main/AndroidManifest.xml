@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Network & Backend Communication -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Wi-Fi State & Scanning Permissions -->
+    <!-- Required to read active connection and signal parameters -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Required to initiate active Wi-Fi scans via WifiManager.startScan() -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <!-- Location Permissions Required for Wi-Fi Scanning on Android 9.0+ (API 28+) -->
+    <!-- Note: Wi-Fi beacon probes expose spatial identifiers; Android mandates fine location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Camera Access: STRICTLY Opt-In for User-Initiated Landmark Capture -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Inertial Sensors (Android 12+ API 31 High-Frequency Sampling) -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+
+    <!-- Hardware feature declarations (marked optional so devices without cameras or compass can install) -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_location_pin"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/ic_location_pin"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.IndoorAI"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.IndoorAI">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
+

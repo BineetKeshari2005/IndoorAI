@@ -1,0 +1,2 @@
+"""IndoorAI FastAPI Application Module."""
+

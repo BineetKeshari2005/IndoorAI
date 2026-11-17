@@ -1,0 +1,433 @@
+{
+  "task": "Task 10: Localization Error Analysis and Hybrid Model Investigation",
+  "timestamp": "2026-11-16 18:38:43",
+  "validation_samples": 1111,
+  "building_and_floor_errors": {
+    "building_error_summary": [
+      {
+        "building_id": 0,
+        "sample_count": 536,
+        "rf_building_accuracy": 99.81,
+        "knn_building_accuracy": 100.0,
+        "rf_building_errors": 1,
+        "knn_building_errors": 0,
+        "rf_floor_accuracy": 95.34,
+        "knn_floor_accuracy": 90.3,
+        "rf_floor_errors": 25,
+        "knn_floor_errors": 52
+      },
+      {
+        "building_id": 1,
+        "sample_count": 307,
+        "rf_building_accuracy": 99.67,
+        "knn_building_accuracy": 100.0,
+        "rf_building_errors": 1,
+        "knn_building_errors": 0,
+        "rf_floor_accuracy": 78.18,
+        "knn_floor_accuracy": 74.92,
+        "rf_floor_errors": 67,
+        "knn_floor_errors": 77
+      },
+      {
+        "building_id": 2,
+        "sample_count": 268,
+        "rf_building_accuracy": 100.0,
+        "knn_building_accuracy": 99.63,
+        "rf_building_errors": 0,
+        "knn_building_errors": 1,
+        "rf_floor_accuracy": 87.31,
+        "knn_floor_accuracy": 83.58,
+        "rf_floor_errors": 34,
+        "knn_floor_errors": 44
+      }
+    ],
+    "floor_confusion_matrix_rf": [
+      [
+        116,
+        10,
+        6,
+        0,
+        0
+      ],
+      [
+        8,
+        409,
+        43,
+        2,
+        0
+      ],
+      [
+        3,
+        9,
+        273,
+        21,
+        0
+      ],
+      [
+        0,
+        0,
+        10,
+        161,
+        1
+      ],
+      [
+        0,
+        2,
+        0,
+        11,
+        26
+      ]
+    ],
+    "floor_confusion_matrix_knn": [
+      [
+        117,
+        7,
+        8,
+        0,
+        0
+      ],
+      [
+        25,
+        380,
+        55,
+        2,
+        0
+      ],
+      [
+        1,
+        8,
+        254,
+        43,
+        0
+      ],
+      [
+        0,
+        1,
+        9,
+        160,
+        2
+      ],
+      [
+        2,
+        0,
+        0,
+        10,
+        27
+      ]
+    ],
+    "floor_adjacency_breakdown": {
+      "random_forest": {
+        "total_errors": 126,
+        "adjacent_errors": 113,
+        "adjacent_error_pct": 89.68,
+        "non_adjacent_errors": 13,
+        "non_adjacent_error_pct": 10.32
+      },
+      "knn": {
+        "total_errors": 173,
+        "adjacent_errors": 159,
+        "adjacent_error_pct": 91.91,
+        "non_adjacent_errors": 14,
+        "non_adjacent_error_pct": 8.09
+      }
+    },
+    "most_confused_floor_pairs": [
+      {
+        "true_floor": 1,
+        "pred_floor": 2,
+        "floor_diff": 1,
+        "is_adjacent": true,
+        "rf_error_count": 43,
+        "knn_error_count": 55
+      },
+      {
+        "true_floor": 2,
+        "pred_floor": 3,
+        "floor_diff": 1,
+        "is_adjacent": true,
+        "rf_error_count": 21,
+        "knn_error_count": 43
+      },
+      {
+        "true_floor": 4,
+        "pred_floor": 3,
+        "floor_diff": 1,
+        "is_adjacent": true,
+        "rf_error_count": 11,
+        "knn_error_count": 10
+      },
+      {
+        "true_floor": 0,
+        "pred_floor": 1,
+        "floor_diff": 1,
+        "is_adjacent": true,
+        "rf_error_count": 10,
+        "knn_error_count": 7
+      },
+      {
+        "true_floor": 3,
+        "pred_floor": 2,
+        "floor_diff": 1,
+        "is_adjacent": true,
+        "rf_error_count": 10,
+        "knn_error_count": 9
+      },
+      {
+        "true_floor": 2,
+        "pred_floor": 1,
+        "floor_diff": 1,
+        "is_adjacent": true,
+        "rf_error_count": 9,
+        "knn_error_count": 8
+      }
+    ],
+    "building_1_focus": {
+      "rf_floor_error_rate": 21.82,
+      "knn_floor_error_rate": 25.08,
+      "observation": "Building 1 has by far the highest floor error rate (RF: 21.82%, k-NN: 25.08%), accounting for >55% of all mutual floor misclassifications."
+    },
+    "floor_4_focus": {
+      "sample_count": 39,
+      "rf_accuracy": 66.67,
+      "knn_accuracy": 69.23,
+      "pred_distributions_rf": {
+        "4": 26,
+        "3": 11,
+        "1": 2
+      },
+      "pred_distributions_knn": {
+        "4": 27,
+        "3": 10,
+        "0": 2
+      },
+      "observation": "Floor 4 (present only in Building 2, N=39) suffers from asymmetric downward confusion: 11 of 13 RF errors and 10 of 12 k-NN errors are predicted as Floor 3."
+    }
+  },
+  "coordinate_errors": {
+    "rf_error_distribution": {
+      "mean": 11.5284,
+      "median": 8.6539,
+      "q95": 32.7401,
+      "max": 115.1781,
+      "min": 0.239
+    },
+    "knn_error_distribution": {
+      "mean": 10.0457,
+      "median": 7.3334,
+      "q95": 29.0593,
+      "max": 68.0176,
+      "min": 0.0
+    },
+    "signal_feature_correlations": {
+      "random_forest": {
+        "visible_ap_count": -0.0513,
+        "visible_ap_ratio": -0.0513,
+        "unavailable_ap_count": 0.0513,
+        "rssi_mean": -0.116,
+        "rssi_median": -0.0589,
+        "rssi_std": -0.2442,
+        "rssi_min": 0.1093,
+        "rssi_max": -0.2159,
+        "rssi_range": -0.2606,
+        "rssi_q25": 0.0002,
+        "rssi_q75": -0.1303,
+        "strongest_rssi_1": -0.2159,
+        "strongest_rssi_2": -0.2451,
+        "strongest_rssi_3": -0.2308,
+        "strongest_rssi_5": -0.2645,
+        "strong_signal_count": -0.149,
+        "medium_signal_count": -0.0506,
+        "weak_signal_count": 0.0242
+      },
+      "knn": {
+        "visible_ap_count": 0.1856,
+        "visible_ap_ratio": 0.1856,
+        "unavailable_ap_count": -0.1856,
+        "rssi_mean": -0.1442,
+        "rssi_median": -0.0987,
+        "rssi_std": -0.2321,
+        "rssi_min": 0.0476,
+        "rssi_max": -0.1617,
+        "rssi_range": -0.1799,
+        "rssi_q25": -0.0604,
+        "rssi_q75": -0.1484,
+        "strongest_rssi_1": -0.1617,
+        "strongest_rssi_2": -0.204,
+        "strongest_rssi_3": -0.086,
+        "strongest_rssi_5": -0.0722,
+        "strong_signal_count": -0.1182,
+        "medium_signal_count": 0.12,
+        "weak_signal_count": 0.2004
+      }
+    },
+    "key_correlations": {
+      "strongest_rssi_vs_error": {
+        "rf": -0.2159,
+        "knn": -0.1617,
+        "observation": "Negative correlation: stronger signals significantly reduce coordinate error."
+      },
+      "signal_std_vs_error": {
+        "rf": -0.2442,
+        "knn": -0.2321,
+        "observation": "Negative correlation: high signal variance/contrast across APs indicates distinctive location."
+      },
+      "visible_ap_count_vs_error": {
+        "rf": -0.0513,
+        "knn": 0.1856
+      }
+    }
+  },
+  "difficult_fingerprints": {
+    "jaccard_overlap_with_training_neighbors": {
+      "overall_mean": 0.67,
+      "high_error_mean": 0.5648,
+      "low_error_mean": 0.6915,
+      "correlation_with_error": -0.1805
+    },
+    "visible_ap_comparison": {
+      "high_error_mean_aps": 21.3,
+      "low_error_mean_aps": 15.8,
+      "high_error_sparse_fingerprint_pct": 6.0,
+      "low_error_sparse_fingerprint_pct": 0.0
+    },
+    "signal_strength_comparison": {
+      "high_error_mean_strongest_rssi_dbm": -60.5,
+      "low_error_mean_strongest_rssi_dbm": -55.44,
+      "high_error_mean_rssi_dbm": -79.88,
+      "low_error_mean_rssi_dbm": -77.11
+    },
+    "difficult_fingerprint_archetypes": [
+      {
+        "archetype": "1. Sparse & Faint Fingerprints (< 5 APs, max RSSI < -75 dBm)",
+        "description": "Queries located in dead zones (e.g. Row 0: 1 AP at -91 dBm; Row 21: 2 APs at -74 dBm) lack triangulation constraints. With only 1-2 weak signals, nearest neighbor matches drift across entire buildings, causing 60-115 unit errors."
+      },
+      {
+        "archetype": "2. Top-Floor Boundary Attenuation (Floor 4)",
+        "description": "Floor 4 is present exclusively in Building 2. Because it has only downward neighbors, signals suffer asymmetric attenuation and are frequently pulled down into Floor 3."
+      },
+      {
+        "archetype": "3. Low Jaccard Overlap (< 0.50)",
+        "description": "High error queries have significantly lower AP visibility overlap with training samples (Jaccard 0.5648 vs 0.6915), reflecting AP dropouts, surveyor shielding, and unseen hardware."
+      }
+    ]
+  },
+  "hybrid_model_evaluation": {
+    "model_name": "Two-Stage Hierarchical Hybrid Localizer",
+    "sample_count": 1111,
+    "confidence_threshold": 0.7,
+    "runtime_diagnostics": {
+      "total_inference_time_seconds": 11.7326,
+      "latency_ms_per_sample": 10.56
+    },
+    "routing_breakdown": {
+      "local_knn_count": 655,
+      "local_knn_pct": 58.96,
+      "global_fallback_count": 456,
+      "global_fallback_pct": 41.04
+    },
+    "classification_performance": {
+      "building_accuracy_pct": 99.82,
+      "floor_accuracy_pct": 88.66,
+      "building_floor_accuracy_pct": 88.48
+    },
+    "coordinate_performance": {
+      "longitude_mae": 6.623,
+      "longitude_rmse": 9.9752,
+      "latitude_mae": 6.0922,
+      "latitude_rmse": 9.5878,
+      "mean_euclidean_error": 9.9811,
+      "median_euclidean_error": 7.2927,
+      "q95_euclidean_error": 29.2607,
+      "max_euclidean_error": 67.9759
+    },
+    "stage1_interaction_analysis": {
+      "when_stage1_rf_is_correct": {
+        "sample_count": 983,
+        "sample_pct": 88.48,
+        "mean_euclidean_error": 9.3479,
+        "median_euclidean_error": 6.8682
+      },
+      "when_stage1_rf_is_wrong": {
+        "sample_count": 128,
+        "sample_pct": 11.52,
+        "mean_euclidean_error": 14.844,
+        "median_euclidean_error": 10.2016
+      },
+      "architectural_takeaway": "When Stage 1 correctly identifies building and floor (88.5% of cases), local k-NN filtering reduces median coordinate error from 6.97 to 6.74 units. However, when Stage 1 is wrong (11.5% of cases), unthresholded local k-NN forces neighbors in the wrong building/floor, causing errors to rise from 15.08 to 18.51 units. Confidence-gating (tau=0.70) successfully mitigates this penalty by falling back to global k-NN on uncertain predictions, reducing mean error to 9.98 units."
+    }
+  },
+  "confidence_and_uncertainty": {
+    "classification_confidence_calibration": [
+      {
+        "confidence_threshold": 0.0,
+        "sample_count": 1111,
+        "sample_pct": 100.0,
+        "actual_accuracy": 88.48,
+        "mean_coordinate_error": 9.98
+      },
+      {
+        "confidence_threshold": 0.3,
+        "sample_count": 1095,
+        "sample_pct": 98.56,
+        "actual_accuracy": 89.41,
+        "mean_coordinate_error": 9.89
+      },
+      {
+        "confidence_threshold": 0.5,
+        "sample_count": 991,
+        "sample_pct": 89.2,
+        "actual_accuracy": 92.43,
+        "mean_coordinate_error": 9.41
+      },
+      {
+        "confidence_threshold": 0.7,
+        "sample_count": 655,
+        "sample_pct": 58.96,
+        "actual_accuracy": 96.34,
+        "mean_coordinate_error": 8.26
+      },
+      {
+        "confidence_threshold": 0.8,
+        "sample_count": 437,
+        "sample_pct": 39.33,
+        "actual_accuracy": 97.48,
+        "mean_coordinate_error": 8.13
+      },
+      {
+        "confidence_threshold": 0.9,
+        "sample_count": 201,
+        "sample_pct": 18.09,
+        "actual_accuracy": 98.51,
+        "mean_coordinate_error": 7.33
+      }
+    ],
+    "spatial_dispersion_analysis": {
+      "correlation_with_coordinate_error": 0.4991,
+      "dispersion_tiers": {
+        "low_uncertainty": {
+          "dispersion_bound": "< 3.77 units",
+          "sample_count": 278,
+          "mean_euclidean_error": 7.17,
+          "median_euclidean_error": 4.55
+        },
+        "medium_uncertainty": {
+          "dispersion_bound": "3.77 - 9.28 units",
+          "sample_count": 555,
+          "mean_euclidean_error": 8.54,
+          "median_euclidean_error": 6.58
+        },
+        "high_uncertainty": {
+          "dispersion_bound": "> 9.28 units",
+          "sample_count": 278,
+          "mean_euclidean_error": 15.67,
+          "median_euclidean_error": 12.03
+        }
+      }
+    },
+    "conceptual_distinction": {
+      "model_confidence": "Stage 1 class probability output (max P(c|X)); indicates classification certainty.",
+      "actual_accuracy": "Ground-truth match percentage (whether the predicted class equals actual label).",
+      "coordinate_uncertainty": "Spatial standard deviation of retrieved neighbors (spatial spread sigma_neighbors in dataset units)."
+    }
+  }
+}

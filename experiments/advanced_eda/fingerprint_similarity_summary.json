@@ -1,0 +1,25 @@
+{
+  "sample_size": 1200,
+  "total_pairs_evaluated": 719400,
+  "visibility_jaccard_similarity": {
+    "intra_building_mean": 0.1411,
+    "intra_building_median": 0.0857,
+    "inter_building_mean": 0.0047,
+    "inter_building_median": 0.0,
+    "intra_floor_same_building_mean": 0.2046,
+    "different_floor_same_building_mean": 0.1209
+  },
+  "signal_cosine_similarity": {
+    "intra_building_mean": 0.2008,
+    "intra_building_median": 0.0956,
+    "inter_building_mean": 0.0057,
+    "inter_building_median": 0.0,
+    "intra_floor_same_building_mean": 0.3129,
+    "different_floor_same_building_mean": 0.1652
+  },
+  "key_findings": [
+    "Fingerprints within the same building exhibit significantly higher mutual AP visibility (Jaccard) than fingerprints across different buildings.",
+    "Inter-building fingerprint cosine similarity is close to zero, proving strong orthogonality between building-specific Wi-Fi footprints.",
+    "Adjacent floors within the same building share overlapping APs due to vertical RF propagation through ceilings/floors, making floor distinction subtler than building distinction."
+  ]
+}

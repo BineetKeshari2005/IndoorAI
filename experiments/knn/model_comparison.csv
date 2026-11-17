@@ -1,0 +1,11 @@
+Performance Metric,Random Forest (Task 07),k-Nearest Neighbors (Task 08),Difference (k-NN - RF),Winner
+Building Classification Accuracy (%),99.82%,99.91%,+0.09%,k-NN
+Floor Classification Accuracy (%),88.66%,84.43%,-4.23%,Random Forest
+Building-Floor Accuracy (%),88.48%,84.43%,-4.05%,Random Forest
+Longitude Coordinate MAE (units),7.95,6.71,-1.23,k-NN
+Latitude Coordinate MAE (units),6.75,6.10,-0.66,k-NN
+Mean 2D Euclidean Error (units),11.53,10.05,-1.48,k-NN
+Median 2D Euclidean Error (units),8.65,7.33,-1.32,k-NN
+95th % 2D Euclidean Error (units),32.74,29.06,-3.68,k-NN
+Model Disk Storage Size,561.7 MB,17.7 MB,-544.0 MB,k-NN (96.5% smaller)
+"Inference Latency (1,111 samples)",0.40 s (0.36 ms/sample),1.11 s (0.996 ms/sample),+0.71 s,Random Forest

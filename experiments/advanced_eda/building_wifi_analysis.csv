@@ -1,0 +1,4 @@
+building_id,sample_count,mean_visible_aps,median_visible_aps,std_visible_aps,active_waps_count,inactive_waps_count,mean_detected_rssi,median_detected_rssi,std_detected_rssi,top_5_detected_waps
+0,5249,15.83,16.0,4.52,200,320,-76.26,-79.0,12.46,WAP156:2335; WAP155:2299; WAP051:2212; WAP052:2170; WAP161:2100
+1,5196,16.59,15.0,8.92,207,313,-77.37,-80.0,13.34,WAP248:1223; WAP108:1162; WAP107:1148; WAP167:1106; WAP166:1085
+2,9492,19.96,19.0,7.11,203,317,-79.99,-83.0,12.13,WAP496:4750; WAP087:4673; WAP502:4637; WAP517:4543; WAP078:4448

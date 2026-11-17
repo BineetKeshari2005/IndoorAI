@@ -1,0 +1,74 @@
+# ==============================================================================
+# IndoorAI - k-Nearest Neighbors Baseline Models Configuration (Task 08)
+# ==============================================================================
+
+experiment:
+  name: "knn_baseline"
+  seed: 42
+  experiment_dir: "experiments/knn"
+  models_dir: "experiments/knn/models"
+  predictions_dir: "experiments/knn/predictions"
+  metrics_dir: "experiments/knn/metrics"
+  plots_dir: "experiments/knn/plots"
+  reports_dir: "experiments/knn/reports"
+  configs_dir: "experiments/knn/configs"
+
+data:
+  processed_dir: "data/processed/ujiindoorloc"
+  variant_a:
+    name: "variant_a_basic"
+    train_features: "data/processed/ujiindoorloc/X_train.parquet"
+    val_features: "data/processed/ujiindoorloc/X_validation.parquet"
+    feature_count: 1040
+    description: "520 normalized RSSI features [0, 1] + 520 binary AP visibility features {0, 1}"
+  variant_b:
+    name: "variant_b_engineered"
+    train_features: "data/processed/ujiindoorloc/feature_engineered/X_train_engineered.parquet"
+    val_features: "data/processed/ujiindoorloc/feature_engineered/X_validation_engineered.parquet"
+    feature_count: 1058
+    description: "520 normalized RSSI + 520 binary visibility + 18 training-scaled summary features [0, 1]"
+  targets:
+    train: "data/processed/ujiindoorloc/y_train.parquet"
+    val: "data/processed/ujiindoorloc/y_validation.parquet"
+  metadata:
+    train: "data/processed/ujiindoorloc/metadata_train.parquet"
+    val: "data/processed/ujiindoorloc/metadata_validation.parquet"
+  encoders: "experiments/preprocessing/artifacts/target_encoders.json"
+  rf_results: "experiments/random_forest/metrics/random_forest_results.json"
+
+cross_validation:
+  strategy: "StratifiedGroupKFold"
+  n_splits: 5
+  group_column: "USERID"
+  stratify_column: "BUILDING_FLOOR_INDEX"
+  shuffle: true
+  random_state: 42
+
+grid_search:
+  feature_variants:
+    - "variant_a_basic"
+    - "variant_b_engineered"
+  metrics:
+    - "cosine"
+    - "manhattan"
+    - "euclidean"
+  k_values:
+    - 3
+    - 5
+    - 7
+    - 11
+    - 15
+  weightings:
+    - "distance"
+    - "uniform"
+
+summary_scaling:
+  method: "minmax"
+  feature_range: [0.0, 1.0]
+
+default_knn:
+  n_neighbors: 5
+  metric: "cosine"
+  weights: "distance"
+  algorithm: "auto"
+  n_jobs: -1
