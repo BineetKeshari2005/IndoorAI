@@ -331,8 +331,8 @@ class ImageCaptureViewModel(
                 // Save metadata record to persistent storage index
                 storage?.savePhoto(metadata)
 
-                // Increment session photo telemetry
-                sessionUseCase?.recordPhoto()
+                // Record photo in unified multimodal session
+                sessionUseCase?.recordPhoto(metadata)
 
                 withContext(Dispatchers.Main) {
                     refreshPhotos()

@@ -26,7 +26,8 @@ import java.util.UUID
 class WifiScanViewModel(
     private var scanner: WifiScanner = MockWifiScanner(),
     private val repository: LocalizationRepository? = null,
-    private val modelAdapter: WifiFingerprintModelAdapter = WifiFingerprintModelAdapter()
+    private val modelAdapter: WifiFingerprintModelAdapter = WifiFingerprintModelAdapter(),
+    private val sessionUseCase: ai.indoor.app.domain.usecases.ManageCaptureSessionUseCase? = null
 ) : ViewModel() {
 
     val scanState: StateFlow<WifiScanState> = scanner.scanState
@@ -173,7 +174,7 @@ class WifiScanViewModel(
 
         val captured = CapturedFingerprint(
             captureId = UUID.randomUUID().toString(),
-            sessionId = sessionId,
+            sessionId = sessionUseCase?.currentSession?.value?.sessionId ?: sessionId,
             timestamp = System.currentTimeMillis(),
             fingerprint = fp,
             manualLabel = if (label.isPresent) label else null,
@@ -182,6 +183,9 @@ class WifiScanViewModel(
         )
 
         _capturedFingerprints.value = _capturedFingerprints.value + captured
+
+        // Associate with active multimodal session if one is currently recording
+        sessionUseCase?.recordWifiScan(fp, if (label.isPresent) label else null)
     }
 
     fun deleteCapture(captureId: String) {

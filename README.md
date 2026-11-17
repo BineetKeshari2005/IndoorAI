@@ -101,6 +101,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Dashboard User Guide](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DASHBOARD_GUIDE.md): Interactive Streamlit dashboard architecture, CSV schema, and user guide.
 - [Multitask MLP Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MLP_ARCHITECTURE.md): Deep multitask neural network specification, layer dimensions, target standardization, and loss balancing.
 - [Android App Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/ANDROID_APP_ARCHITECTURE.md): Jetpack Compose mobile client architecture, permissions, hardware abstraction, Wi-Fi throttling mitigation, and API integration.
+- [Multimodal Session Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_SESSION_ARCHITECTURE.md): Unified multimodal capture sessions, timestamp normalization, crash recovery, and dataset packaging.
 
 ---
 
@@ -176,4 +177,5 @@ Track our progress in [IMPLEMENTATION_STATUS.md](file:///Users/bineetkeshari/Des
 - **Task 14 (Android Wi-Fi Fingerprint Collector):** COMPLETED
 - **Task 15 (Android IMU & Magnetometer Streamer):** COMPLETED
 - **Task 16 (Android User-Initiated Photo Capture & Privacy Sanitizer):** COMPLETED
-- **Tasks 17 through 30:** Pending subsequent implementation prompts.
+- **Task 17 (Unified Multimodal Capture Session & Dataset Builder):** COMPLETED
+- **Tasks 18 through 30:** Pending subsequent implementation prompts.

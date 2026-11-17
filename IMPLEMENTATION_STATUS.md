@@ -3,9 +3,9 @@
 This document tracks progress across all 30 implementation tasks defined in the [Development Roadmap](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DEVELOPMENT_ROADMAP.md).
 
 **Summary Progress:**
-- **Completed:** 14 / 30 tasks (46.7%)
+- **Completed:** 17 / 30 tasks (56.7%)
 - **In Progress:** 0 / 30 tasks
-- **Not Started:** 16 / 30 tasks
+- **Not Started:** 13 / 30 tasks
 
 ---
 
@@ -29,7 +29,7 @@ This document tracks progress across all 30 implementation tasks defined in the 
 | **Task 14** | **Android Wi-Fi Fingerprint Collector** | **Phase 4** | **COMPLETED** | **2026-11-17** |
 | **Task 15** | **Android IMU & Magnetometer Streamer** | **Phase 4** | **COMPLETED** | **2026-11-17** |
 | **Task 16** | **Android User-Initiated Photo Capture & Privacy Sanitizer** | **Phase 4** | **COMPLETED** | **2026-11-17** |
-| Task 17 | Pretrained Visual Feature Extraction Backbone | Phase 5 | NOT STARTED | Planned |
+| **Task 17** | **Unified Multimodal Capture Session & Dataset Builder** | **Phase 4** | **COMPLETED** | **2026-11-17** |
 | Task 18 | Indoor Object and Landmark Detection (YOLO) | Phase 5 | NOT STARTED | Planned |
 | Task 19 | Semantic Segmentation for Walkable Areas & Boundaries | Phase 5 | NOT STARTED | Planned |
 | Task 20 | Visual-Spatial Retrieval & k-NN Pose Estimation | Phase 5 | NOT STARTED | Planned |
@@ -382,6 +382,46 @@ This document tracks progress across all 30 implementation tasks defined in the 
   - **100% On-Device Face Obfuscation:** Uses Android's native framework face detection without cloud inference or biometric identification.
   - **Review Before Persist:** Surveyor reviews the photo, face blur, and landmark labels before saving.
   - **Session Integration:** Increments `photoCount` on the active survey session and stores all data in app-private scoped storage.
+
+### Task 17: Unified Multimodal Capture Session & Dataset Builder
+- **Status:** COMPLETED
+- **Completed On:** 2026-11-17
+- **Deliverables Created & Enhanced:**
+  - Unified Session State Machine & Models:
+    - [android/app/src/main/java/ai/indoor/app/domain/models/SurveySession.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/SurveySession.kt) (Central session model with UUID, lifecycle state, building/floor/room labels, observation telemetry counts, duration, and clock anchor).
+    - [android/app/src/main/java/ai/indoor/app/domain/models/SurveySessionStatus.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/SurveySessionStatus.kt) (Enum: `CREATED`, `ACTIVE`, `PAUSED`, `COMPLETED`, `CANCELLED`).
+    - [android/app/src/main/java/ai/indoor/app/domain/models/DataSourceType.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/DataSourceType.kt) (Enum: `REAL`, `MOCK`, `HYBRID`).
+    - [android/app/src/main/java/ai/indoor/app/domain/models/SurveyAnnotation.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/SurveyAnnotation.kt) (Ground-truth annotations: Corridor, Door, Room Entrance, Staircase, Elevator, Landmark, Reference Point, Location Correction, Note).
+    - [android/app/src/main/java/ai/indoor/app/domain/models/SurveyWifiObservation.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/SurveyWifiObservation.kt) (Wi-Fi sweep model with normalized timestamps, AP list, and CSV serialization).
+    - [android/app/src/main/java/ai/indoor/app/domain/models/SurveySensorObservation.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/SurveySensorObservation.kt) (IMU/Magnetometer 3-axis readings with original nanoseconds and normalized timestamps).
+    - [android/app/src/main/java/ai/indoor/app/domain/models/SurveyPhotoObservation.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/models/SurveyPhotoObservation.kt) (Sanitized photo observation metadata referencing local files).
+  - Timestamp Normalization & Synchronization Layer:
+    - [android/app/src/main/java/ai/indoor/app/domain/timestamp/ClockAnchor.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/timestamp/ClockAnchor.kt) (Synchronized atomic snapshot of wall-clock epoch ms and boottime nanoseconds).
+    - [android/app/src/main/java/ai/indoor/app/domain/timestamp/TimeSource.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/timestamp/TimeSource.kt) & `SyncMethod.kt` (Original clock domain tracking and conversion method enumeration).
+    - [android/app/src/main/java/ai/indoor/app/domain/timestamp/TimestampRecord.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/timestamp/TimestampRecord.kt) (Preserves raw timestamps, records normalized UTC epoch ms, ISO-8601 string, and uncertainty bounds).
+    - [android/app/src/main/java/ai/indoor/app/domain/timestamp/TimestampNormalizer.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/timestamp/TimestampNormalizer.kt) (Normalization logic across boottime nanos, boottime micros, and wall-clock millis).
+  - Unified Chronological Timeline:
+    - [android/app/src/main/java/ai/indoor/app/domain/timeline/SessionTimelineItem.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/timeline/SessionTimelineItem.kt) (Unified timeline item model with inspection metadata).
+    - [android/app/src/main/java/ai/indoor/app/domain/timeline/ObservationTimelineBuilder.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/timeline/ObservationTimelineBuilder.kt) (Chronological multi-stream aggregator and sorter).
+  - Persistence & Interrupted Session Recovery:
+    - [android/app/src/main/java/ai/indoor/app/domain/storage/SessionPersistenceManager.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/storage/SessionPersistenceManager.kt) (App-private storage in `filesDir/survey_sessions/<id>/`, JSONL streaming observation journals, crash/interruption recovery converting `ACTIVE` $\rightarrow$ `PAUSED` with explicit flag, and zero-orphan image cleanup).
+  - Dataset Packaging & Verification:
+    - [android/app/src/main/java/ai/indoor/app/domain/export/ExportManifest.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/export/ExportManifest.kt) (Manifest schema tracking files, record counts, real/mock source counts, and SHA-256 hashes).
+    - [android/app/src/main/java/ai/indoor/app/domain/export/ExportValidator.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/export/ExportValidator.kt) (Pre-export validation enforcing parent session references, unique IDs, photo file existence, and mandatory unsanitized image rejection).
+    - [android/app/src/main/java/ai/indoor/app/domain/export/DatasetExporter.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/export/DatasetExporter.kt) (Builds `indoorai_session_<id>.zip` with `session.json`, `wifi_observations.csv`, `imu_observations.csv`, `photo_metadata.csv`, `annotations.csv`, `images/`, and `manifest.json`).
+  - ViewModels & UI:
+    - [android/app/src/main/java/ai/indoor/app/domain/usecases/ManageCaptureSessionUseCase.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/domain/usecases/ManageCaptureSessionUseCase.kt) (Multimodal usecase coordinating lifecycle, ingestion, timeline, and export).
+    - [android/app/src/main/java/ai/indoor/app/viewmodel/SessionViewModel.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/viewmodel/SessionViewModel.kt) (Lifecycle actions, timeline StateFlow, export triggering, IMU sensor stream buffering).
+    - [android/app/src/main/java/ai/indoor/app/ui/screens/CaptureSessionScreen.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/main/java/ai/indoor/app/ui/screens/CaptureSessionScreen.kt) (Material 3 UI: active session timer, interrupted recovery alert, observation counters with real/mock breakdown, add annotation dialog, interactive timeline inspection dialog, ZIP export dialog, session history).
+  - Unit Test Suites:
+    - [android/app/src/test/java/ai/indoor/app/domain/timestamp/TimestampNormalizerTest.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/test/java/ai/indoor/app/domain/timestamp/TimestampNormalizerTest.kt) (Anchor math, boottime to wall-clock, invalid timestamp safety, Wi-Fi cache uncertainty).
+    - [android/app/src/test/java/ai/indoor/app/domain/models/SurveySessionLifecycleTest.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/test/java/ai/indoor/app/domain/models/SurveySessionLifecycleTest.kt) (Lifecycle transitions, duration, source type classification, JSON roundtrip).
+    - [android/app/src/test/java/ai/indoor/app/domain/storage/SessionPersistenceTest.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/test/java/ai/indoor/app/domain/storage/SessionPersistenceTest.kt) (Disk persistence, crash recovery from `ACTIVE` to `PAUSED`, image cleanup on delete).
+    - [android/app/src/test/java/ai/indoor/app/domain/export/DatasetExportAndValidationTest.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/test/java/ai/indoor/app/domain/export/DatasetExportAndValidationTest.kt) (Full ZIP generation, SHA-256 verification, manifest validation, rejection of unsanitized images and missing files).
+    - [android/app/src/test/java/ai/indoor/app/domain/timeline/ObservationTimelineTest.kt](file:///Users/bineetkeshari/Desktop/IndoorAI/android/app/src/test/java/ai/indoor/app/domain/timeline/ObservationTimelineTest.kt) (Timeline sorting, real vs mock differentiation, uncertain timing handling).
+  - Documentation:
+    - [docs/MULTIMODAL_SESSION_ARCHITECTURE.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_SESSION_ARCHITECTURE.md) (Unified session architecture, clock anchor synchronization, persistence, recovery, ZIP export, and validation).
+
 
 
 

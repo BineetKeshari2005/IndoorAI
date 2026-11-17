@@ -24,7 +24,24 @@ import ai.indoor.app.wifi.MockWifiScanner
 class MainActivity : ComponentActivity() {
 
     private val repository by lazy { LocalizationRepositoryImpl() }
-    private val sessionUseCase by lazy { ManageCaptureSessionUseCase(repository) }
+
+    private val sessionPersistenceManager by lazy {
+        ai.indoor.app.domain.storage.SessionPersistenceManager(applicationContext)
+    }
+
+    private val datasetExporter by lazy {
+        ai.indoor.app.domain.export.DatasetExporter(
+            java.io.File(applicationContext.filesDir, "exports")
+        )
+    }
+
+    private val sessionUseCase by lazy {
+        ManageCaptureSessionUseCase(
+            repository = repository,
+            persistenceManager = sessionPersistenceManager,
+            exporter = datasetExporter
+        )
+    }
 
     // Providers: use Android hardware where available, fallback gracefully to Mock
     private val wifiScanner by lazy {
@@ -70,7 +87,11 @@ class MainActivity : ComponentActivity() {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return WifiScanViewModel(scanner = wifiScanner, repository = repository) as T
+                return WifiScanViewModel(
+                    scanner = wifiScanner,
+                    repository = repository,
+                    sessionUseCase = sessionUseCase
+                ) as T
             }
         }
     }
