@@ -103,6 +103,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Android App Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/ANDROID_APP_ARCHITECTURE.md): Jetpack Compose mobile client architecture, permissions, hardware abstraction, Wi-Fi throttling mitigation, and API integration.
 - [Multimodal Session Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_SESSION_ARCHITECTURE.md): Unified multimodal capture sessions, timestamp normalization, crash recovery, and dataset packaging.
 - [Dataset Ingestion Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DATASET_INGESTION_ARCHITECTURE.md): Backend pipeline for ZIP verification, manifest integrity, multimodal QA, and dataset registry.
+- [Multimodal Dataset Explorer](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_DATASET_EXPLORER.md): Multimodal survey explorer and visualization dashboard, API client, privacy-sanitized photo viewer, and QA inspection.
 
 ---
 

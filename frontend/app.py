@@ -30,6 +30,16 @@ from backend.app.services.prediction_service import (
     PredictionService,
     get_prediction_service,
 )
+from frontend.api_client import DEFAULT_BACKEND_URL, DatasetApiClient
+from frontend.components.comparison_view import render_dataset_comparison
+from frontend.components.management_view import render_management
+from frontend.components.overview import render_overview
+from frontend.components.photo_view import render_photos_and_annotations
+from frontend.components.quality_view import render_quality_dashboard
+from frontend.components.sensor_view import render_sensor_explorer
+from frontend.components.timeline_view import render_timeline_explorer
+from frontend.components.upload import render_upload
+from frontend.components.wifi_view import render_wifi_explorer
 
 # Set page configuration
 st.set_page_config(
@@ -133,12 +143,8 @@ def load_service() -> PredictionService:
 
 
 def render_sidebar(service: PredictionService) -> str:
-    """Render the sidebar with brand info, model selector, and navigation."""
+    """Render the sidebar with model selector and navigation for benchmark workspace."""
     with st.sidebar:
-        st.markdown("## 📍 IndoorAI")
-        st.caption("Indoor Positioning & Wi-Fi Fingerprinting Engine")
-        st.markdown("---")
-
         st.markdown("### 🤖 Select Active Model")
         k_val = service.knn_model.params.n_neighbors if service.knn_model else 7
         model_options = [
@@ -752,7 +758,75 @@ def render_section_f(service: PredictionService) -> None:
     st.caption("Benchmark verified on official UJIIndoorLoc 1,111 validation records under zero data leakage conditions.")
 
 
-def main():
+def render_multimodal_workspace() -> None:
+    """Renders the Multimodal Survey Dataset Explorer (Tasks 17-19)."""
+    with st.sidebar:
+        st.markdown("### 🔌 Backend Connection")
+        backend_url = st.text_input(
+            "FastAPI Base URL:",
+            value=os.getenv("INDOORAI_BACKEND_URL", DEFAULT_BACKEND_URL),
+            help="URL of the running IndoorAI FastAPI backend service."
+        )
+        client = DatasetApiClient(base_url=backend_url)
+        is_online, health_msg = client.check_health()
+        if is_online:
+            st.success(f"● {health_msg}")
+        else:
+            st.warning(f"○ {health_msg}")
+            st.caption("Start backend: `python -m uvicorn backend.app.main:app --port 8000`")
+
+        st.markdown("---")
+        st.markdown("### 📑 Explorer Sections")
+        sections = [
+            "1. Overview & Catalog",
+            "2. Upload Dataset",
+            "3. Quality Dashboard",
+            "4. Wi-Fi Explorer",
+            "5. Sensor Explorer",
+            "6. Multimodal Timeline",
+            "7. Photos & Annotations",
+            "8. Dataset Comparison",
+            "9. Dataset Management",
+        ]
+        selected_sec = st.radio("Navigation", sections, index=0)
+
+        st.markdown("---")
+        st.markdown("### 🛡️ System Status")
+        st.info("● Ingestion Engine: Task 18 Compliant")
+        st.info("● Privacy Policy: Client EXIF Stripping")
+        st.caption("IndoorAI Multimodal Explorer v1.2.0")
+
+    # Main Header
+    st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–19)</div>',
+        unsafe_allow_html=True
+    )
+
+    selected_dataset_id = st.session_state.get("selected_dataset_id")
+
+    if selected_sec == "1. Overview & Catalog":
+        render_overview(client)
+    elif selected_sec == "2. Upload Dataset":
+        render_upload(client)
+    elif selected_sec == "3. Quality Dashboard":
+        render_quality_dashboard(client, selected_dataset_id)
+    elif selected_sec == "4. Wi-Fi Explorer":
+        render_wifi_explorer(client, selected_dataset_id)
+    elif selected_sec == "5. Sensor Explorer":
+        render_sensor_explorer(client, selected_dataset_id)
+    elif selected_sec == "6. Multimodal Timeline":
+        render_timeline_explorer(client, selected_dataset_id)
+    elif selected_sec == "7. Photos & Annotations":
+        render_photos_and_annotations(client, selected_dataset_id)
+    elif selected_sec == "8. Dataset Comparison":
+        render_dataset_comparison(client)
+    elif selected_sec == "9. Dataset Management":
+        render_management(client, selected_dataset_id)
+
+
+def render_benchmark_workspace() -> None:
+    """Renders the original UJIIndoorLoc ML Benchmark & Localization Workspace (Tasks 11-12)."""
     service = load_service()
     active_model = render_sidebar(service)
 
@@ -762,6 +836,30 @@ def main():
     render_section_d(service, prediction, ground_truth)
     render_section_e(service, prediction, ground_truth)
     render_section_f(service)
+
+
+def main():
+    with st.sidebar:
+        st.markdown("## 📍 IndoorAI")
+        st.caption("Multimodal Positioning & Survey Analytics")
+        st.markdown("---")
+
+        st.markdown("### 🗂️ Select Workspace")
+        workspace_mode = st.radio(
+            "Workspace View:",
+            [
+                "🌐 Multimodal Survey Explorer (Tasks 17–19)",
+                "🔬 UJIIndoorLoc Benchmark & Inference (Tasks 07–12)",
+            ],
+            index=0,
+            help="Switch between mobile multimodal survey data analytics and the academic ML benchmark dashboard."
+        )
+        st.markdown("---")
+
+    if workspace_mode == "🌐 Multimodal Survey Explorer (Tasks 17–19)":
+        render_multimodal_workspace()
+    else:
+        render_benchmark_workspace()
 
 
 if __name__ == "__main__":
