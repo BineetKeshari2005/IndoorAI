@@ -85,6 +85,8 @@ data/processed/*
 !data/processed/.gitkeep
 data/external/*
 !data/external/.gitkeep
+data/survey_datasets/*
+!data/survey_datasets/.gitkeep
 
 # Logs
 logs/

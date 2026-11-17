@@ -102,6 +102,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Multitask MLP Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MLP_ARCHITECTURE.md): Deep multitask neural network specification, layer dimensions, target standardization, and loss balancing.
 - [Android App Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/ANDROID_APP_ARCHITECTURE.md): Jetpack Compose mobile client architecture, permissions, hardware abstraction, Wi-Fi throttling mitigation, and API integration.
 - [Multimodal Session Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_SESSION_ARCHITECTURE.md): Unified multimodal capture sessions, timestamp normalization, crash recovery, and dataset packaging.
+- [Dataset Ingestion Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DATASET_INGESTION_ARCHITECTURE.md): Backend pipeline for ZIP verification, manifest integrity, multimodal QA, and dataset registry.
 
 ---
 
@@ -178,4 +179,5 @@ Track our progress in [IMPLEMENTATION_STATUS.md](file:///Users/bineetkeshari/Des
 - **Task 15 (Android IMU & Magnetometer Streamer):** COMPLETED
 - **Task 16 (Android User-Initiated Photo Capture & Privacy Sanitizer):** COMPLETED
 - **Task 17 (Unified Multimodal Capture Session & Dataset Builder):** COMPLETED
-- **Tasks 18 through 30:** Pending subsequent implementation prompts.
+- **Task 18 (Multimodal Dataset Ingestion & Quality Assurance Backend):** COMPLETED
+- **Tasks 19 through 30:** Pending subsequent implementation prompts.
