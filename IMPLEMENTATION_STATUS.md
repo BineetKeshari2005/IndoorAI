@@ -3,9 +3,9 @@
 This document tracks progress across all 30 implementation tasks defined in the [Development Roadmap](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DEVELOPMENT_ROADMAP.md).
 
 **Summary Progress:**
-- **Completed:** 20 / 30 tasks (66.7%)
+- **Completed:** 21 / 30 tasks (70.0%)
 - **In Progress:** 0 / 30 tasks
-- **Not Started:** 10 / 30 tasks
+- **Not Started:** 9 / 30 tasks
 
 ---
 
@@ -33,7 +33,7 @@ This document tracks progress across all 30 implementation tasks defined in the 
 | **Task 18** | **Multimodal Dataset Ingestion & Quality Assurance Backend** | **Phase 4** | **COMPLETED** | **2026-11-17** |
 | **Task 19** | **Multimodal Dataset Explorer & Visualization Dashboard** | **Phase 4** | **COMPLETED** | **2026-11-17** |
 | **Task 20** | **Multimodal Data Preprocessing & Temporal Alignment Pipeline** | **Phase 5** | **COMPLETED** | **2026-11-17** |
-| Task 21 | Pedestrian Dead Reckoning (PDR) Engine | Phase 6 | NOT STARTED | Planned |
+| **Task 21** | **Pedestrian Dead Reckoning (PDR) Engine** | **Phase 6** | **COMPLETED** | **2026-11-17** |
 | Task 22 | Extended Kalman Filter (EKF) for Wi-Fi + PDR | Phase 6 | NOT STARTED | Planned |
 | Task 23 | Map-Constrained Particle Filter | Phase 6 | NOT STARTED | Planned |
 | Task 24 | Multimodal Cross-Attention Fusion Network | Phase 7 | NOT STARTED | Planned |
@@ -495,6 +495,39 @@ This document tracks progress across all 30 implementation tasks defined in the 
     - Full repository test run passing 159 tests with 0 failures, 0 errors, and zero regressions on existing UJIIndoorLoc baselines.
   - Architectural Documentation:
     - [docs/MULTIMODAL_PREPROCESSING_ARCHITECTURE.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_PREPROCESSING_ARCHITECTURE.md) (Architecture specification, cleaning rules, kinematics, window alignment, privacy gates, segmentation, and manifest schemas).
+
+### Task 21: Pedestrian Dead Reckoning (PDR) Engine
+- **Status:** COMPLETED
+- **Completed On:** 2026-11-17
+- **Deliverables Created & Enhanced:**
+  - Dedicated PDR Engine Package (`src/pdr/`):
+    - [src/pdr/config.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/config.py) (`PDRConfig` dataclass encapsulating gravity thresholds, filter frequencies, step detection parameters, Weinberg factor, and heading sources).
+    - [src/pdr/coordinate_frames.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/coordinate_frames.py) (Transformations across Smartphone Body, Local Navigation ENU, Gravity-Aligned, and Horizontal Movement planes; quaternion math and Euler angles).
+    - [src/pdr/filtering.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/filtering.py) (Zero-phase Butterworth lowpass and bandpass filters; streaming exponential smoothing with sampling-gap state flushes).
+    - [src/pdr/gravity.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/gravity.py) (`GravityCompensator` supporting Method A: Android Rotation Vector conjugate rotation, and Method B: Low-pass accelerometer filtering with automatic fallback).
+    - [src/pdr/orientation.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/orientation.py) (`OrientationEstimator` estimating roll, pitch, yaw from Rotation Vector, Gyroscope integration, or tilt-compensated Magnetometer with magnetic anomaly detection).
+    - [src/pdr/heading.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/heading.py) (`HeadingEstimator` extracting per-step heading angles $\theta_k$ and propagating sensor-specific angular uncertainties).
+    - [src/pdr/step_detection.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/step_detection.py) (`StepDetector` implementing Butterworth bandpass filtering, prominence-based peak extraction, and refractory duplicate rejection within 330 ms).
+    - [src/pdr/step_length.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/step_length.py) (`StepLengthEstimator` implementing calibrated Weinberg bounce model $L = K \cdot (a_{\max}-a_{\min})^{0.25}$ clamped to physiological bounds $[0.30, 1.20]$ m).
+    - [src/pdr/uncertainty.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/uncertainty.py) (`PDRUncertaintyPropagator` computing 2D spatial covariance accumulation $P_k = P_{k-1} + J_k Q_k J_k^T$ and 95% confidence uncertainty radius).
+    - [src/pdr/trajectory.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/trajectory.py) (`TrajectoryReconstructor` accumulating 2D relative dead reckoning coordinates starting from origin $(0, 0)$).
+    - [src/pdr/reporting.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/reporting.py) (`PDRReport`, `PDRManifest`, and SHA-256 cryptographic verification).
+    - [src/pdr/pipeline.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/pipeline.py) (`PDRPipeline` end-to-end execution orchestrator writing 5 Parquet artifacts, report, and manifest).
+    - [src/pdr/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/__init__.py) and [src/sensor_fusion/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/sensor_fusion/__init__.py) (Package exports).
+  - Backend API Schemas & Service Endpoints:
+    - [backend/app/schemas/pdr.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/schemas/pdr.py) (Pydantic request/response models for PDR execution, status, trajectory points, step events, and report).
+    - [backend/app/services/pdr_service.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/services/pdr_service.py) (`PDRService` executing PDR pipeline, querying cached parquet artifacts, and caching reports).
+    - [backend/app/api/routes/datasets.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/api/routes/datasets.py) (Added REST endpoints: `POST /api/datasets/{id}/pdr`, `GET /api/datasets/{id}/pdr`, `GET /api/datasets/{id}/pdr/trajectory`, `GET /api/datasets/{id}/pdr/steps`, `GET /api/datasets/{id}/pdr/report`).
+  - Frontend UI & Visualizations:
+    - [frontend/api_client.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/api_client.py) (Added PDR client methods: `run_pdr()`, `get_pdr_status()`, `get_pdr_trajectory()`, `get_pdr_steps()`).
+    - [frontend/components/pdr_view.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/pdr_view.py) (Interactive Section 11 view: KPI metric cards, 2D Plotly trajectory with uncertainty ellipses, step events table, and heading-over-time plots).
+    - [frontend/components/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/__init__.py) and [frontend/app.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/app.py) (Integrated `11. PDR & Movement Analysis` into sidebar navigation).
+  - Testing & Verification:
+    - [tests/test_pdr.py](file:///Users/bineetkeshari/Desktop/IndoorAI/tests/test_pdr.py) (9 comprehensive unit and API integration tests covering coordinate transformations, gravity filtering, walking step detection with refractory rejection, Weinberg step length estimation, 2D dead reckoning with L-turn trajectory, covariance growth, and all 5 FastAPI REST endpoints).
+    - Full repository test run passing 168 tests (159 previous + 9 PDR) with 0 failures, 0 errors, and zero regressions on baseline models.
+  - Architectural Documentation:
+    - [docs/PDR_ENGINE_ARCHITECTURE.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_ENGINE_ARCHITECTURE.md) (Complete specification covering coordinate frames, gravity compensation methods, Butterworth filtering, heading sources, magnetic disturbance handling, Weinberg model, spatial covariance Jacobian math, Parquet schemas, and system boundaries).
+
 
 
 

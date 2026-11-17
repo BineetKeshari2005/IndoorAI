@@ -271,3 +271,69 @@ class DatasetApiClient:
             logger.warning("Error fetching processed files for %s: %s", dataset_id, e)
             return []
 
+    def run_pdr(self, dataset_id: str, config_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Triggers Pedestrian Dead Reckoning (PDR) trajectory reconstruction."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr"
+        payload = config_params or {}
+        try:
+            res = self._request("POST", url, json=payload, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"PDR execution failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error running PDR for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Failed to connect to PDR service: {e}")
+
+    def get_pdr_status(self, dataset_id: str) -> Dict[str, Any]:
+        """Fetches the latest PDR status and summary report for a dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            if res.status_code == 404:
+                return {"dataset_id": dataset_id, "is_computed": False}
+            raise DatasetApiClientException(
+                f"Failed to fetch PDR status: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error fetching PDR status for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Failed to connect to backend: {e}")
+
+    def get_pdr_trajectory(self, dataset_id: str) -> List[Dict[str, Any]]:
+        """Retrieves 2D relative trajectory coordinate points."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/trajectory"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                data = res.json()
+                return data.get("points", [])
+            if res.status_code == 404:
+                return []
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching PDR trajectory for %s: %s", dataset_id, e)
+            return []
+
+    def get_pdr_steps(self, dataset_id: str) -> List[Dict[str, Any]]:
+        """Retrieves detected step events with kinematics."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/steps"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                data = res.json()
+                return data.get("steps", [])
+            if res.status_code == 404:
+                return []
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching PDR steps for %s: %s", dataset_id, e)
+            return []
+
+

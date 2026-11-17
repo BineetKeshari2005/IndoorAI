@@ -3,6 +3,7 @@
 from frontend.components.comparison_view import render_dataset_comparison
 from frontend.components.management_view import render_management
 from frontend.components.overview import render_overview
+from frontend.components.pdr_view import render_pdr_view
 from frontend.components.photo_view import render_photos_and_annotations
 from frontend.components.preprocessing_view import render_preprocessing_view
 from frontend.components.quality_view import render_quality_dashboard
@@ -22,4 +23,5 @@ __all__ = [
     "render_dataset_comparison",
     "render_management",
     "render_preprocessing_view",
+    "render_pdr_view",
 ]

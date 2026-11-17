@@ -18,6 +18,15 @@ from backend.app.schemas.dataset import (
     DatasetUploadResponse,
     DatasetValidationResponse,
 )
+from backend.app.schemas.pdr import (
+    PDRRunRequest,
+    PDRRunResponse,
+    PDRStatusResponse,
+    StepRecord,
+    StepsResponse,
+    TrajectoryPoint,
+    TrajectoryResponse,
+)
 from backend.app.schemas.preprocessing import (
     PreprocessRequest,
     PreprocessResponse,
@@ -27,6 +36,7 @@ from backend.app.schemas.preprocessing import (
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
+from backend.app.services.pdr_service import PDRService
 from backend.app.services.preprocessing_service import PreprocessingService
 from src.core.logging import setup_logger
 
@@ -37,6 +47,7 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 # Global service instance dependency
 _ingestion_service: Optional[DatasetIngestionService] = None
 _preprocessing_service: Optional[PreprocessingService] = None
+_pdr_service: Optional[PDRService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -53,6 +64,14 @@ def get_preprocessing_service() -> PreprocessingService:
     if _preprocessing_service is None:
         _preprocessing_service = PreprocessingService()
     return _preprocessing_service
+
+
+def get_pdr_service() -> PDRService:
+    """Dependency provider for PDRService."""
+    global _pdr_service
+    if _pdr_service is None:
+        _pdr_service = PDRService()
+    return _pdr_service
 
 
 @router.post(
@@ -441,5 +460,116 @@ def list_processed_files(
         dataset_id=dataset_id,
         files=files
     )
+
+
+@router.post(
+    "/{dataset_id}/pdr",
+    response_model=PDRRunResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Execute Pedestrian Dead Reckoning (PDR)",
+    description="Reconstructs relative 2D pedestrian movement path from preprocessed IMU and orientation streams."
+)
+def run_pdr(
+    dataset_id: str,
+    request_params: Optional[PDRRunRequest] = None,
+    service: PDRService = Depends(get_pdr_service)
+) -> PDRRunResponse:
+    """Executes PDR trajectory reconstruction."""
+    try:
+        report, manifest = service.run_pdr(dataset_id, request_params)
+        return PDRRunResponse(
+            dataset_id=dataset_id,
+            status=report.status,
+            message=f"PDR completed with status '{report.status}'.",
+            report=report.to_dict()
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except FileNotFoundError as fnf:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(fnf))
+    except Exception as e:
+        logger.error("PDR execution failed for %s: %s", dataset_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDR execution failed: {e}"
+        )
+
+
+@router.get(
+    "/{dataset_id}/pdr",
+    response_model=PDRStatusResponse,
+    summary="Get PDR computation status",
+    description="Checks whether PDR has been executed and returns the latest quality report and manifest."
+)
+def get_pdr_status(
+    dataset_id: str,
+    service: PDRService = Depends(get_pdr_service)
+) -> PDRStatusResponse:
+    """Retrieves PDR status and summary report."""
+    is_computed, report, manifest = service.get_status(dataset_id)
+    return PDRStatusResponse(
+        dataset_id=dataset_id,
+        is_computed=is_computed,
+        report=report,
+        manifest=manifest
+    )
+
+
+@router.get(
+    "/{dataset_id}/pdr/trajectory",
+    response_model=TrajectoryResponse,
+    summary="Get reconstructed relative 2D trajectory",
+    description="Returns sequential relative trajectory coordinate points (rel_x, rel_y) with headings and uncertainty."
+)
+def get_pdr_trajectory(
+    dataset_id: str,
+    service: PDRService = Depends(get_pdr_service)
+) -> TrajectoryResponse:
+    """Retrieves 2D relative trajectory points."""
+    points = service.get_trajectory(dataset_id)
+    return TrajectoryResponse(
+        dataset_id=dataset_id,
+        total_points=len(points),
+        points=points
+    )
+
+
+@router.get(
+    "/{dataset_id}/pdr/steps",
+    response_model=StepsResponse,
+    summary="Get detected human step events",
+    description="Returns detected step events with timestamps, peak acceleration, and estimated step lengths."
+)
+def get_pdr_steps(
+    dataset_id: str,
+    service: PDRService = Depends(get_pdr_service)
+) -> StepsResponse:
+    """Retrieves detected step records."""
+    steps = service.get_steps(dataset_id)
+    return StepsResponse(
+        dataset_id=dataset_id,
+        total_steps=len(steps),
+        steps=steps
+    )
+
+
+@router.get(
+    "/{dataset_id}/pdr/report",
+    summary="Get comprehensive PDR report",
+    description="Returns the full JSON diagnostic, movement, and uncertainty report."
+)
+def get_pdr_report(
+    dataset_id: str,
+    service: PDRService = Depends(get_pdr_service)
+):
+    """Retrieves full PDR report JSON."""
+    is_computed, report, _ = service.get_status(dataset_id)
+    if not is_computed or not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No PDR report found for dataset '{dataset_id}'."
+        )
+    return report
+
 
 
