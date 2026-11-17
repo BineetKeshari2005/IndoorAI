@@ -104,6 +104,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Multimodal Session Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_SESSION_ARCHITECTURE.md): Unified multimodal capture sessions, timestamp normalization, crash recovery, and dataset packaging.
 - [Dataset Ingestion Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DATASET_INGESTION_ARCHITECTURE.md): Backend pipeline for ZIP verification, manifest integrity, multimodal QA, and dataset registry.
 - [Multimodal Dataset Explorer](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_DATASET_EXPLORER.md): Multimodal survey explorer and visualization dashboard, API client, privacy-sanitized photo viewer, and QA inspection.
+- [Multimodal Preprocessing Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_PREPROCESSING_ARCHITECTURE.md): Preprocessing pipeline, Wi-Fi cleaning, tri-axial kinematics, temporal alignment windowing, session segmentation, and audit manifests.
 
 ---
 

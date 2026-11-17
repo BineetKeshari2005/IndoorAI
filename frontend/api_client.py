@@ -220,3 +220,54 @@ class DatasetApiClient:
         except httpx.RequestError as e:
             logger.warning("Error fetching image %s for %s: %s", filename, dataset_id, e)
             return None
+
+    def preprocess_dataset(self, dataset_id: str, config_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Triggers preprocessing and temporal alignment for an ingested dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/preprocess"
+        payload = config_params or {}
+        try:
+            res = self._request("POST", url, json=payload, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Preprocessing failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error triggering preprocessing for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Failed to connect to preprocessing service: {e}")
+
+    def get_preprocessing_status(self, dataset_id: str) -> Dict[str, Any]:
+        """Fetches the latest preprocessing status and report for a dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/preprocessing"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            if res.status_code == 404:
+                return {"dataset_id": dataset_id, "is_preprocessed": False}
+            raise DatasetApiClientException(
+                f"Failed to fetch preprocessing status: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error fetching preprocessing status for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Failed to connect to backend: {e}")
+
+    def get_processed_files(self, dataset_id: str) -> List[Dict[str, Any]]:
+        """Retrieves list of generated processed artifact files for a dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/preprocessing/files"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                data = res.json()
+                return data.get("files", [])
+            if res.status_code == 404:
+                return []
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching processed files for %s: %s", dataset_id, e)
+            return []
+

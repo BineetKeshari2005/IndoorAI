@@ -18,9 +18,16 @@ from backend.app.schemas.dataset import (
     DatasetUploadResponse,
     DatasetValidationResponse,
 )
+from backend.app.schemas.preprocessing import (
+    PreprocessRequest,
+    PreprocessResponse,
+    PreprocessingStatusResponse,
+    ProcessedFilesResponse,
+)
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
+from backend.app.services.preprocessing_service import PreprocessingService
 from src.core.logging import setup_logger
 
 logger = setup_logger("DatasetsRouter")
@@ -29,6 +36,7 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 
 # Global service instance dependency
 _ingestion_service: Optional[DatasetIngestionService] = None
+_preprocessing_service: Optional[PreprocessingService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -37,6 +45,14 @@ def get_ingestion_service() -> DatasetIngestionService:
     if _ingestion_service is None:
         _ingestion_service = DatasetIngestionService()
     return _ingestion_service
+
+
+def get_preprocessing_service() -> PreprocessingService:
+    """Dependency provider for PreprocessingService."""
+    global _preprocessing_service
+    if _preprocessing_service is None:
+        _preprocessing_service = PreprocessingService()
+    return _preprocessing_service
 
 
 @router.post(
@@ -354,4 +370,76 @@ def get_dataset_image(
 
     media_type = "image/png" if ext == ".png" else "image/jpeg"
     return FileResponse(str(target_img), media_type=media_type)
+
+
+@router.post(
+    "/{dataset_id}/preprocess",
+    response_model=PreprocessResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Preprocess and temporally align survey dataset",
+    description="Cleans Wi-Fi, IMU, photos, and annotations, performs temporal alignment, and generates Parquet artifacts."
+)
+def preprocess_dataset(
+    dataset_id: str,
+    request_params: Optional[PreprocessRequest] = None,
+    service: PreprocessingService = Depends(get_preprocessing_service)
+) -> PreprocessResponse:
+    """Executes multimodal preprocessing pipeline."""
+    try:
+        report, manifest = service.preprocess_dataset(dataset_id, request_params)
+        return PreprocessResponse(
+            dataset_id=dataset_id,
+            status=report.status,
+            message=f"Preprocessing completed with status '{report.status}'.",
+            report=report.to_dict()
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except FileNotFoundError as fnf:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(fnf))
+    except Exception as e:
+        logger.error("Preprocessing failed for %s: %s", dataset_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Preprocessing execution failed: {e}"
+        )
+
+
+@router.get(
+    "/{dataset_id}/preprocessing",
+    response_model=PreprocessingStatusResponse,
+    summary="Get preprocessing report and status",
+    description="Checks whether preprocessing has been executed and returns the latest quality report and manifest."
+)
+def get_preprocessing_status(
+    dataset_id: str,
+    service: PreprocessingService = Depends(get_preprocessing_service)
+) -> PreprocessingStatusResponse:
+    """Retrieves preprocessing status and report."""
+    is_preprocessed, report, manifest = service.get_status(dataset_id)
+    return PreprocessingStatusResponse(
+        dataset_id=dataset_id,
+        is_preprocessed=is_preprocessed,
+        report=report,
+        manifest=manifest
+    )
+
+
+@router.get(
+    "/{dataset_id}/preprocessing/files",
+    response_model=ProcessedFilesResponse,
+    summary="List processed dataset Parquet and JSON files",
+    description="Returns metadata, record counts, file sizes, and SHA-256 checksums of generated processed artifacts."
+)
+def list_processed_files(
+    dataset_id: str,
+    service: PreprocessingService = Depends(get_preprocessing_service)
+) -> ProcessedFilesResponse:
+    """Lists processed artifact files for a dataset."""
+    files = service.list_processed_files(dataset_id)
+    return ProcessedFilesResponse(
+        dataset_id=dataset_id,
+        files=files
+    )
+
 

@@ -35,6 +35,7 @@ from frontend.components.comparison_view import render_dataset_comparison
 from frontend.components.management_view import render_management
 from frontend.components.overview import render_overview
 from frontend.components.photo_view import render_photos_and_annotations
+from frontend.components.preprocessing_view import render_preprocessing_view
 from frontend.components.quality_view import render_quality_dashboard
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
@@ -787,19 +788,20 @@ def render_multimodal_workspace() -> None:
             "7. Photos & Annotations",
             "8. Dataset Comparison",
             "9. Dataset Management",
+            "10. Preprocessing & Alignment",
         ]
         selected_sec = st.radio("Navigation", sections, index=0)
 
         st.markdown("---")
         st.markdown("### 🛡️ System Status")
         st.info("● Ingestion Engine: Task 18 Compliant")
-        st.info("● Privacy Policy: Client EXIF Stripping")
-        st.caption("IndoorAI Multimodal Explorer v1.2.0")
+        st.info("● Preprocessing Engine: Task 20 Ready")
+        st.caption("IndoorAI Multimodal Explorer v1.3.0")
 
     # Main Header
     st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–19)</div>',
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–20)</div>',
         unsafe_allow_html=True
     )
 
@@ -823,6 +825,8 @@ def render_multimodal_workspace() -> None:
         render_dataset_comparison(client)
     elif selected_sec == "9. Dataset Management":
         render_management(client, selected_dataset_id)
+    elif selected_sec == "10. Preprocessing & Alignment":
+        render_preprocessing_view(client, selected_dataset_id)
 
 
 def render_benchmark_workspace() -> None:
