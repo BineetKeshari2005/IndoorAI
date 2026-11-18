@@ -42,6 +42,7 @@ from frontend.components.quality_view import render_quality_dashboard
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
+from frontend.components.wifi_localization_view import render_wifi_localization_view
 from frontend.components.wifi_view import render_wifi_explorer
 
 # Set page configuration
@@ -793,6 +794,7 @@ def render_multimodal_workspace() -> None:
             "10. Preprocessing & Alignment",
             "11. PDR & Movement Analysis",
             "12. PDR Calibration & Validation",
+            "13. Site-Specific Wi-Fi Localization",
         ]
         selected_sec = st.radio("Navigation", sections, index=0)
 
@@ -802,12 +804,13 @@ def render_multimodal_workspace() -> None:
         st.info("● Preprocessing Engine: Task 20 Ready")
         st.info("● PDR Kinematics: Task 21 Ready")
         st.info("● PDR Calibration: Task 22 Ready")
-        st.caption("IndoorAI Multimodal Explorer v1.5.0")
+        st.info("● Site Wi-Fi Radio Map: Task 23 Ready")
+        st.caption("IndoorAI Multimodal Explorer v1.6.0")
 
     # Main Header
     st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–22)</div>',
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–23)</div>',
         unsafe_allow_html=True
     )
 
@@ -837,6 +840,8 @@ def render_multimodal_workspace() -> None:
         render_pdr_view(client, selected_dataset_id)
     elif selected_sec == "12. PDR Calibration & Validation":
         render_pdr_calibration_view(client, selected_dataset_id)
+    elif selected_sec == "13. Site-Specific Wi-Fi Localization":
+        render_wifi_localization_view(client, selected_dataset_id)
 
 
 def render_benchmark_workspace() -> None:

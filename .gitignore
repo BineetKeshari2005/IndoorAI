@@ -89,6 +89,8 @@ data/survey_datasets/*
 !data/survey_datasets/.gitkeep
 data/calibration/*
 !data/calibration/.gitkeep
+data/radio_maps/*
+!data/radio_maps/.gitkeep
 
 # Logs
 logs/

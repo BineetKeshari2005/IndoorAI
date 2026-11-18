@@ -11,6 +11,7 @@ from frontend.components.quality_view import render_quality_dashboard
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
+from frontend.components.wifi_localization_view import render_wifi_localization_view
 from frontend.components.wifi_view import render_wifi_explorer
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "render_preprocessing_view",
     "render_pdr_view",
     "render_pdr_calibration_view",
+    "render_wifi_localization_view",
 ]

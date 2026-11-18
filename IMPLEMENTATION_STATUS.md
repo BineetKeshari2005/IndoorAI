@@ -3,9 +3,9 @@
 This document tracks progress across all 30 implementation tasks defined in the [Development Roadmap](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DEVELOPMENT_ROADMAP.md).
 
 **Summary Progress:**
-- **Completed:** 22 / 30 tasks (73.3%)
+- **Completed:** 23 / 30 tasks (76.7%)
 - **In Progress:** 0 / 30 tasks
-- **Not Started:** 8 / 30 tasks
+- **Not Started:** 7 / 30 tasks
 
 ---
 
@@ -35,7 +35,7 @@ This document tracks progress across all 30 implementation tasks defined in the 
 | **Task 20** | **Multimodal Data Preprocessing & Temporal Alignment Pipeline** | **Phase 5** | **COMPLETED** | **2026-11-17** |
 | **Task 21** | **Pedestrian Dead Reckoning (PDR) Engine** | **Phase 6** | **COMPLETED** | **2026-11-17** |
 | **Task 22** | **PDR Calibration, Ground-Truth Validation & Drift Analysis** | **Phase 6** | **COMPLETED** | **2026-11-18** |
-| Task 23 | Map-Constrained Particle Filter | Phase 6 | NOT STARTED | Planned |
+| **Task 23** | **Site-Specific Wi-Fi Radio Map & Fingerprint Localization** | **Phase 6** | **COMPLETED** | **2026-11-18** |
 | Task 24 | Multimodal Cross-Attention Fusion Network | Phase 7 | NOT STARTED | Planned |
 | Task 25 | Multimodal Joint Training & Uncertainty Calibration | Phase 7 | NOT STARTED | Planned |
 | Task 26 | Topological-Metric Spatial Floorplan Mapping Engine | Phase 7 | NOT STARTED | Planned |
@@ -558,6 +558,33 @@ This document tracks progress across all 30 implementation tasks defined in the 
     - Full repository test run passing **183 tests** (168 previous + 15 new) with 0 failures, 0 errors, and zero regressions.
   - Architectural Documentation:
     - [docs/PDR_CALIBRATION_AND_VALIDATION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_CALIBRATION_AND_VALIDATION.md) (Complete specification covering trial schemas, measurement methodology, Weinberg optimization math, circular statistics, drift metrics, 2D Chi-square confidence ellipse derivation, and system limitations).
+
+### Task 23: Site-Specific Wi-Fi Radio Map & Fingerprint Localization
+- **Status:** COMPLETED
+- **Completed On:** 2026-11-18
+- **Deliverables Created & Enhanced:**
+  - Dedicated Site-Specific Wi-Fi Package (`src/wifi_localization/`):
+    - [src/wifi_localization/models.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/models.py) (`ReferenceLocation`, `ApObservation`, `SurveySweep`, `ApStatistics`, `LocationRadioProfile`, `RadioMapMetadata`, `RadioMap`, `CandidateMatch`, `LocalizationPrediction`, `EvaluationMetrics`).
+    - [src/wifi_localization/normalization.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/normalization.py) (Lowercase colon-separated BSSID regex normalization, $[-105, -20]$ dBm bounds validation, multi-band frequency classification [2.4GHz, 5GHz, 6GHz], in-sweep duplicate elimination via maximum RSSI).
+    - [src/wifi_localization/radio_map_builder.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/radio_map_builder.py) (`RadioMapBuilder` extracting temporal sweeps from flat survey observations, computing AP visibility rate $V = N/N_{\text{sweeps}}$, mean, median, sample std with Bessel correction, min/max RSSI, and compiling versioned site radio maps).
+    - [src/wifi_localization/storage.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/storage.py) (Atomic JSON serialization and retrieval for radio maps, reference locations, and metadata under `data/radio_maps/<site_id>/v<version>/`).
+    - [src/wifi_localization/knn_localizer.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/knn_localizer.py) (`KnnLocalizer` implementing union Euclidean/Manhattan distance with unobserved AP penalty $P_{\text{missing}} = -105.0$ dBm, inverse distance weighting $w_i = \frac{1}{D_i + \epsilon}$, 2D coordinate interpolation, building/floor plurality voting, and exponential confidence mapping).
+    - [src/wifi_localization/probabilistic_localizer.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/probabilistic_localizer.py) (`ProbabilisticLocalizer` evaluating per-AP Gaussian log-likelihood $\ln \mathcal{N}(z; \mu, \sigma^2)$ with variance floor $\sigma \ge 2.0$ dBm, asymmetric unobserved AP log-penalties, softmax posterior weights, and coordinate interpolation).
+    - [src/wifi_localization/evaluator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/evaluator.py) (`WifiLocalizationEvaluator` enforcing strict session-partitioned train/test separation to eliminate temporal autocorrelation leakage from stationary repeated scans; computing building/floor/location accuracy, mean/median/p95 coordinate errors in meters, and floor confusion matrices).
+    - [src/wifi_localization/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/wifi_localization/__init__.py) (Package public exports).
+  - Backend API Schemas & Service Endpoints:
+    - [backend/app/schemas/wifi_survey.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/schemas/wifi_survey.py) (Pydantic models for reference location registration, radio map compilation, query localization, candidate matches, and evaluation).
+    - [backend/app/services/wifi_survey_service.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/services/wifi_survey_service.py) (`WifiSurveyService` managing reference locations, auto-discovering locations from survey annotations, compiling radio maps from `wifi_cleaned.parquet`, executing online queries, and orchestrating session holdout evaluations).
+    - [backend/app/api/routes/datasets.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/api/routes/datasets.py) (Added 6 REST endpoints: `POST /wifi-survey/locations`, `GET /wifi-survey/locations`, `POST /wifi-survey/fingerprints/build`, `GET /wifi-survey/radio-map`, `GET /wifi-survey/radio-maps`, `POST /wifi-survey/localize`, `POST /wifi-survey/evaluate`).
+  - Frontend UI & Visualizations:
+    - [frontend/api_client.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/api_client.py) (Added client methods for location registration, radio map compilation, query localization, and evaluation).
+    - [frontend/components/wifi_localization_view.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/wifi_localization_view.py) (Interactive Section 13 dashboard view: Reference Locations & Survey Registry with 2D scatter layout, Radio Map Compiler & AP Analytics with visibility histograms and top-15 RSSI bar charts, Live Fingerprint Localizer Testbed with candidate matches and 2D spatial positioning map, and Leakage-Resistant Evaluation with floor confusion matrix).
+    - [frontend/components/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/__init__.py) and [frontend/app.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/app.py) (Registered `13. Site-Specific Wi-Fi Localization` in sidebar navigation).
+  - Testing & Verification:
+    - [tests/test_wifi_localization.py](file:///Users/bineetkeshari/Desktop/IndoorAI/tests/test_wifi_localization.py) (18 comprehensive unit and API integration tests covering BSSID normalization, RSSI gating, channel band classification, sweep deduplication, multi-sweep aggregation, visibility rate calculation, Weighted k-NN interpolation and voting, Probabilistic Gaussian matching, zero overlap warnings, strict session separation leakage detection, filesystem storage, and all FastAPI endpoints).
+    - Full repository test run passing **201 tests** (183 previous + 18 new) with 0 failures, 0 errors, and zero regressions on baseline models.
+  - Architectural Documentation:
+    - [docs/SITE_SPECIFIC_WIFI_LOCALIZATION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/SITE_SPECIFIC_WIFI_LOCALIZATION.md) (Comprehensive architecture specification covering decoupling from UJI benchmark, BSSID sanitization, radio map construction, weighted k-NN, probabilistic modeling, confidence estimation, leakage-resistant session holdout methodology, and REST API schemas).
 
 
 

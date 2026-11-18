@@ -42,12 +42,27 @@ from backend.app.schemas.pdr_calibration import (
     TrialRegisterRequest,
     TrialSummaryResponse,
 )
+from backend.app.schemas.wifi_survey import (
+    CandidateMatchResponse,
+    LocalizationPredictionResponse,
+    RadioMapBuildRequest,
+    RadioMapListResponse,
+    RadioMapMetadataResponse,
+    RadioMapResponse,
+    ReferenceLocationCreate,
+    ReferenceLocationResponse,
+    ReferenceLocationsListResponse,
+    WifiEvaluationRequest,
+    WifiEvaluationResponse,
+    WifiLocalizationQueryRequest,
+)
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
 from backend.app.services.pdr_service import PDRService
 from backend.app.services.pdr_calibration_service import PDRCalibrationService
 from backend.app.services.preprocessing_service import PreprocessingService
+from backend.app.services.wifi_survey_service import WifiSurveyService
 from src.core.logging import setup_logger
 
 logger = setup_logger("DatasetsRouter")
@@ -59,6 +74,7 @@ _ingestion_service: Optional[DatasetIngestionService] = None
 _preprocessing_service: Optional[PreprocessingService] = None
 _pdr_service: Optional[PDRService] = None
 _pdr_calibration_service: Optional[PDRCalibrationService] = None
+_wifi_survey_service: Optional[WifiSurveyService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -91,6 +107,14 @@ def get_pdr_calibration_service() -> PDRCalibrationService:
     if _pdr_calibration_service is None:
         _pdr_calibration_service = PDRCalibrationService()
     return _pdr_calibration_service
+
+
+def get_wifi_survey_service() -> WifiSurveyService:
+    """Dependency provider for WifiSurveyService (Task 23)."""
+    global _wifi_survey_service
+    if _wifi_survey_service is None:
+        _wifi_survey_service = WifiSurveyService()
+    return _wifi_survey_service
 
 
 @router.post(
@@ -802,6 +826,196 @@ def get_evaluation_reports(
     """Retrieves stored evaluation reports."""
     reports = cal_service.get_evaluation_reports(dataset_id=dataset_id)
     return reports
+
+
+# =========================================================================
+# Task 23: Site-Specific Wi-Fi Survey Radio Map & Localization Endpoints
+# =========================================================================
+
+@router.post(
+    "/{dataset_id}/wifi-survey/locations",
+    response_model=ReferenceLocationResponse,
+    summary="Register a site reference location",
+    description="Registers or updates a verified reference landmark location for site-specific Wi-Fi localization."
+)
+def register_reference_location(
+    dataset_id: str,
+    location_data: ReferenceLocationCreate,
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> ReferenceLocationResponse:
+    """Registers or updates a reference location."""
+    try:
+        ref_loc = service.register_location(site_id=location_data.site_id, loc_data=location_data)
+        return ReferenceLocationResponse(**ref_loc.to_dict())
+    except Exception as e:
+        logger.error(f"Failed to register reference location: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/wifi-survey/locations",
+    response_model=ReferenceLocationsListResponse,
+    summary="List site reference locations",
+    description="Retrieves all registered reference locations for a specific physical site."
+)
+def list_reference_locations(
+    dataset_id: str,
+    site_id: str = Query(..., description="Site identifier"),
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> ReferenceLocationsListResponse:
+    """Retrieves reference locations for a site."""
+    locations = service.get_locations(site_id=site_id)
+    resp_list = [ReferenceLocationResponse(**loc.to_dict()) for loc in locations]
+    return ReferenceLocationsListResponse(
+        site_id=site_id,
+        total_locations=len(resp_list),
+        locations=resp_list,
+    )
+
+
+@router.post(
+    "/{dataset_id}/wifi-survey/fingerprints/build",
+    response_model=RadioMapResponse,
+    summary="Compile site radio map from survey observations",
+    description="Aggregates multi-sweep Wi-Fi observations into mean/median/std signal distributions and visibility rates."
+)
+def build_radio_map(
+    dataset_id: str,
+    build_req: RadioMapBuildRequest,
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> RadioMapResponse:
+    """Compiles a site radio map from dataset observations."""
+    try:
+        radio_map = service.build_radio_map(dataset_id=dataset_id, request=build_req)
+        return RadioMapResponse(
+            metadata=RadioMapMetadataResponse(**radio_map.metadata.to_dict()),
+            locations={k: ReferenceLocationResponse(**v.to_dict()) for k, v in radio_map.locations.items()},
+            profiles={k: v.to_dict() for k, v in radio_map.profiles.items()},
+            all_bssids=radio_map.all_bssids,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to build radio map: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to build radio map: {e}",
+        )
+
+
+@router.get(
+    "/{dataset_id}/wifi-survey/radio-map",
+    response_model=RadioMapResponse,
+    summary="Get compiled site radio map",
+    description="Retrieves full radio map metadata, reference locations, and aggregated radio profiles."
+)
+def get_radio_map(
+    dataset_id: str,
+    site_id: str = Query(..., description="Site identifier"),
+    version: str = Query("v1", description="Radio map version"),
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> RadioMapResponse:
+    """Retrieves a compiled radio map."""
+    radio_map = service.get_radio_map(site_id=site_id, version=version)
+    if not radio_map:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Radio map for site '{site_id}' version '{version}' not found.",
+        )
+    return RadioMapResponse(
+        metadata=RadioMapMetadataResponse(**radio_map.metadata.to_dict()),
+        locations={k: ReferenceLocationResponse(**v.to_dict()) for k, v in radio_map.locations.items()},
+        profiles={k: v.to_dict() for k, v in radio_map.profiles.items()},
+        all_bssids=radio_map.all_bssids,
+    )
+
+
+@router.get(
+    "/{dataset_id}/wifi-survey/radio-maps",
+    response_model=RadioMapListResponse,
+    summary="List compiled site radio maps",
+    description="Lists metadata for all compiled radio maps on disk."
+)
+def list_site_radio_maps(
+    dataset_id: str,
+    site_id: Optional[str] = Query(None, description="Optional site filter"),
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> RadioMapListResponse:
+    """Lists compiled radio maps."""
+    maps = service.list_maps(site_id=site_id)
+    resp_list = [RadioMapMetadataResponse(**m) for m in maps]
+    return RadioMapListResponse(
+        total_radio_maps=len(resp_list),
+        radio_maps=resp_list,
+    )
+
+
+@router.post(
+    "/{dataset_id}/wifi-survey/localize",
+    response_model=LocalizationPredictionResponse,
+    summary="Estimate location from Wi-Fi fingerprint",
+    description="Matches query AP observations against site radio map using weighted k-NN or Gaussian log-likelihood."
+)
+def localize_fingerprint(
+    dataset_id: str,
+    query_req: WifiLocalizationQueryRequest,
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> LocalizationPredictionResponse:
+    """Performs site-specific fingerprint localization."""
+    try:
+        pred = service.localize(request=query_req)
+        return LocalizationPredictionResponse(
+            predicted_building_id=pred.predicted_building_id,
+            predicted_floor_id=pred.predicted_floor_id,
+            predicted_x_m=pred.predicted_x_m,
+            predicted_y_m=pred.predicted_y_m,
+            predicted_room_id=pred.predicted_room_id,
+            confidence=pred.confidence,
+            algorithm=pred.algorithm,
+            matched_ap_count=pred.matched_ap_count,
+            total_query_aps=pred.total_query_aps,
+            candidate_matches=[CandidateMatchResponse(**c.to_dict()) for c in pred.candidate_matches],
+            warnings=pred.warnings,
+            is_low_confidence=pred.is_low_confidence,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Localization failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Localization failed: {e}",
+        )
+
+
+@router.post(
+    "/{dataset_id}/wifi-survey/evaluate",
+    response_model=WifiEvaluationResponse,
+    summary="Evaluate Wi-Fi localization accuracy under session partition",
+    description="Computes building, floor, location, and coordinate error metrics under strict session-level train/test separation."
+)
+def evaluate_wifi_localization(
+    dataset_id: str,
+    eval_req: WifiEvaluationRequest,
+    service: WifiSurveyService = Depends(get_wifi_survey_service),
+) -> WifiEvaluationResponse:
+    """Runs session-partitioned offline evaluation."""
+    try:
+        metrics = service.evaluate(dataset_id=dataset_id, request=eval_req)
+        return WifiEvaluationResponse(
+            site_id=eval_req.site_id,
+            algorithm=eval_req.algorithm,
+            metrics=metrics.to_dict(),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Evaluation failed: {e}",
+        )
+
 
 
 

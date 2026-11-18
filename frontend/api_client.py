@@ -432,5 +432,125 @@ class DatasetApiClient:
             logger.warning("Error fetching evaluation reports for %s: %s", dataset_id, e)
             return []
 
+    # -------------------------------------------------------------------------
+    # Task 23: Site-Specific Wi-Fi Radio Map & Localization API Methods
+    # -------------------------------------------------------------------------
+
+    def register_wifi_survey_location(
+        self, dataset_id: str, location_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Registers or updates a verified reference landmark location for a site."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/locations"
+        try:
+            res = self._request("POST", url, json=location_data, timeout=30.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Failed to register reference location: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error registering reference location for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error registering reference location: {e}")
+
+    def list_wifi_survey_locations(
+        self, dataset_id: str, site_id: str
+    ) -> List[Dict[str, Any]]:
+        """Retrieves all registered reference locations for a specific site."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/locations?site_id={site_id}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json().get("locations", [])
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching reference locations for site %s: %s", site_id, e)
+            return []
+
+    def build_wifi_radio_map(
+        self, dataset_id: str, build_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Compiles a versioned site radio map from survey dataset observations."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/fingerprints/build"
+        try:
+            res = self._request("POST", url, json=build_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Failed to build radio map: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error building radio map for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error building radio map: {e}")
+
+    def get_wifi_radio_map(
+        self, dataset_id: str, site_id: str, version: str = "v1"
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves a compiled site radio map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/radio-map?site_id={site_id}&version={version}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            return None
+        except httpx.RequestError as e:
+            logger.warning("Error fetching radio map %s/%s: %s", site_id, version, e)
+            return None
+
+    def list_wifi_radio_maps(
+        self, dataset_id: str, site_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Lists compiled radio maps available on disk."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/radio-maps"
+        if site_id:
+            url += f"?site_id={site_id}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json().get("radio_maps", [])
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error listing radio maps: %s", e)
+            return []
+
+    def localize_wifi_fingerprint(
+        self, dataset_id: str, query_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Estimates location from an input Wi-Fi query fingerprint."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/localize"
+        try:
+            res = self._request("POST", url, json=query_data, timeout=30.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Localization failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error during fingerprint localization: %s", e)
+            raise DatasetApiClientException(f"Connection error during localization: {e}")
+
+    def evaluate_wifi_localization(
+        self, dataset_id: str, eval_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Runs session-partitioned offline evaluation on survey dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/wifi-survey/evaluate"
+        try:
+            res = self._request("POST", url, json=eval_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Evaluation failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error during Wi-Fi evaluation: %s", e)
+            raise DatasetApiClientException(f"Connection error during evaluation: {e}")
+
 
 
