@@ -75,10 +75,26 @@ from backend.app.schemas.computer_vision import (
     VisualMatchRequest,
     VisualMatchResponse,
 )
+from backend.app.schemas.mapping import (
+    BuildingMapSummaryResponse,
+    CreateBuildingMapRequest,
+    CreateConnectionRequest,
+    CreateCorridorRequest,
+    CreateDoorRequest,
+    CreateFloorRequest,
+    CreateRoomRequest,
+    CreateVerticalTransitionRequest,
+    ImportLandmarksRequest,
+    ImportWifiReferencesRequest,
+    MapMetricsResponse,
+    MapValidationResponse,
+    PublishVersionRequest,
+)
 from backend.app.services.computer_vision_service import ComputerVisionService
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
+from backend.app.services.mapping_service import MappingService
 from backend.app.services.pdr_service import PDRService
 from backend.app.services.pdr_calibration_service import PDRCalibrationService
 from backend.app.services.preprocessing_service import PreprocessingService
@@ -98,6 +114,7 @@ _pdr_calibration_service: Optional[PDRCalibrationService] = None
 _wifi_survey_service: Optional[WifiSurveyService] = None
 _fusion_service: Optional[SensorFusionService] = None
 _vision_service: Optional[ComputerVisionService] = None
+_mapping_service: Optional[MappingService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -154,6 +171,14 @@ def get_computer_vision_service() -> ComputerVisionService:
     if _vision_service is None:
         _vision_service = ComputerVisionService()
     return _vision_service
+
+
+def get_mapping_service() -> MappingService:
+    """Dependency provider for MappingService (Task 26)."""
+    global _mapping_service
+    if _mapping_service is None:
+        _mapping_service = MappingService()
+    return _mapping_service
 
 
 @router.post(
@@ -1362,6 +1387,328 @@ def evaluate_computer_vision(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Vision evaluation failed: {e}",
         )
+
+
+# =====================================================================
+# Task 26: Indoor Map Generation & Spatial Representation Endpoints
+# =====================================================================
+
+@router.get(
+    "/{dataset_id}/maps/buildings",
+    response_model=List[BuildingMapSummaryResponse],
+    summary="List all indoor building maps",
+    description="Returns high-level metadata summaries of all persisted building maps."
+)
+def list_indoor_maps(
+    dataset_id: str,
+    service: MappingService = Depends(get_mapping_service),
+) -> List[BuildingMapSummaryResponse]:
+    """Retrieves summaries of all registered building maps."""
+    summaries = service.list_buildings()
+    return [
+        BuildingMapSummaryResponse(
+            building_id=s["building_id"],
+            name=s["name"],
+            map_version=s.get("map_version", "1.0.0"),
+            floor_count=s.get("floor_count", 0),
+            total_rooms_count=s.get("total_rooms_count", 0),
+            total_doors_count=s.get("total_doors_count", 0),
+            updated_at=s.get("updated_at", ""),
+        )
+        for s in summaries
+    ]
+
+
+@router.get(
+    "/{dataset_id}/maps/{building_id}",
+    summary="Retrieve full building map definition",
+    description="Returns the comprehensive hierarchical building map including all floors, rooms, corridors, doors, and transitions."
+)
+def get_indoor_map(
+    dataset_id: str,
+    building_id: str,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Retrieves complete building map."""
+    bmap = service.get_building_map(building_id)
+    if not bmap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Building map '{building_id}' not found.",
+        )
+    return bmap.to_dict()
+
+
+@router.post(
+    "/{dataset_id}/maps/buildings",
+    summary="Create or update an indoor building map",
+    description="Initializes or updates root building attributes."
+)
+def create_or_update_building_map(
+    dataset_id: str,
+    req: CreateBuildingMapRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Creates or updates a building map."""
+    bmap = service.create_or_update_building(req)
+    return bmap.to_dict()
+
+
+@router.post(
+    "/{dataset_id}/maps/floors",
+    summary="Add a floor to a building map",
+    description="Registers a building floor level with boundary and elevation."
+)
+def add_map_floor(
+    dataset_id: str,
+    building_id: str,
+    req: CreateFloorRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Adds a floor level to the building."""
+    try:
+        bmap = service.add_floor(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/rooms",
+    summary="Add a room polygon to a floor",
+    description="Registers an enclosed room space with polygon boundary, category, and door links."
+)
+def add_map_room(
+    dataset_id: str,
+    building_id: str,
+    req: CreateRoomRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Adds a room polygon to the floor."""
+    try:
+        bmap = service.add_room(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/corridors",
+    summary="Add a corridor centerline to a floor",
+    description="Registers a walkable corridor centerline trajectory and width."
+)
+def add_map_corridor(
+    dataset_id: str,
+    building_id: str,
+    req: CreateCorridorRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Adds a corridor to the floor."""
+    try:
+        bmap = service.add_corridor(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/doors",
+    summary="Add a door connecting spaces",
+    description="Registers a door portal linking rooms, corridors, or exits."
+)
+def add_map_door(
+    dataset_id: str,
+    building_id: str,
+    req: CreateDoorRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Adds a door to the floor."""
+    try:
+        bmap = service.add_door(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/vertical-transitions",
+    summary="Add a vertical transition across floors",
+    description="Registers a staircase or elevator shaft with landings on multiple floors."
+)
+def add_map_vertical_transition(
+    dataset_id: str,
+    building_id: str,
+    req: CreateVerticalTransitionRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Adds a staircase or elevator transition."""
+    try:
+        bmap = service.add_vertical_transition(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/connections",
+    summary="Add a navigation topological connection edge",
+    description="Explicitly connects two indoor spaces or vertical landings."
+)
+def add_map_connection(
+    dataset_id: str,
+    building_id: str,
+    req: CreateConnectionRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Adds a topological connection edge."""
+    try:
+        bmap = service.add_connection(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/{building_id}/import-wifi",
+    summary="Import Wi-Fi survey reference locations",
+    description="Imports Task 23 Wi-Fi fingerprint reference points and associates them with floor spaces."
+)
+def import_wifi_references_to_map(
+    dataset_id: str,
+    building_id: str,
+    req: ImportWifiReferencesRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Imports Wi-Fi reference locations into the floor map."""
+    try:
+        bmap = service.import_wifi_references(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/{building_id}/import-landmarks",
+    summary="Import verified visual landmarks",
+    description="Imports Task 25 computer vision landmark detections and links them with doors and rooms."
+)
+def import_landmarks_to_map(
+    dataset_id: str,
+    building_id: str,
+    req: ImportLandmarksRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Imports visual landmarks into the floor map."""
+    try:
+        bmap = service.import_landmarks(building_id=building_id, req=req)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/{building_id}/validate",
+    response_model=MapValidationResponse,
+    summary="Validate building map geometry and topological consistency",
+    description="Performs geometric and topological validation, checking polygon validity, corridor lengths, door connectivity, and planar vertical transition shifts."
+)
+def validate_indoor_map(
+    dataset_id: str,
+    building_id: str,
+    service: MappingService = Depends(get_mapping_service),
+) -> MapValidationResponse:
+    """Runs full structural validation on a building map."""
+    try:
+        report = service.validate_building_map(building_id)
+        return MapValidationResponse(
+            is_valid=report.is_valid,
+            error_count=report.error_count,
+            warning_count=report.warning_count,
+            errors=[e.to_dict() for e in report.detailed_errors] if report.detailed_errors else [{"error_type": "ERROR", "message": e} for e in report.errors],
+            warnings=[w.to_dict() for w in report.detailed_warnings] if report.detailed_warnings else [{"error_type": "WARNING", "message": w} for w in report.warnings],
+            summary=report.summary,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/{building_id}/evaluate",
+    response_model=MapMetricsResponse,
+    summary="Evaluate indoor map coverage and topological metrics",
+    description="Calculates total surveyed area, graph node/edge counts, connected components, verification ratio, and accessibility ratio."
+)
+def evaluate_indoor_map(
+    dataset_id: str,
+    building_id: str,
+    service: MappingService = Depends(get_mapping_service),
+) -> MapMetricsResponse:
+    """Evaluates quantitative metrics for a building map."""
+    try:
+        metrics = service.evaluate_building_map(building_id)
+        return MapMetricsResponse(**metrics.to_dict())
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/maps/{building_id}/publish",
+    summary="Publish an immutable version snapshot of the building map",
+    description="Freezes and stores a version snapshot under versions/v{N}/."
+)
+def publish_indoor_map_version(
+    dataset_id: str,
+    building_id: str,
+    req: PublishVersionRequest,
+    service: MappingService = Depends(get_mapping_service),
+) -> dict:
+    """Publishes a numbered map release."""
+    try:
+        bmap = service.publish_version(building_id=building_id, version_tag=req.version_tag)
+        return bmap.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/maps/{building_id}/versions",
+    summary="List all published map version snapshots",
+    description="Returns version history for a building map."
+)
+def list_indoor_map_versions(
+    dataset_id: str,
+    building_id: str,
+    service: MappingService = Depends(get_mapping_service),
+) -> List[dict]:
+    """Retrieves list of published version snapshots."""
+    return service.list_versions(building_id=building_id)
+
+
+@router.get(
+    "/{dataset_id}/maps/{building_id}/export/{export_format}",
+    summary="Export indoor map as JSON or GeoJSON FeatureCollection",
+    description="Exports the complete map or specific floor in standard JSON or RFC 7946 GeoJSON format."
+)
+def export_indoor_map(
+    dataset_id: str,
+    building_id: str,
+    export_format: str,
+    floor_id: Optional[int] = Query(None, description="Optional floor ID filter"),
+    service: MappingService = Depends(get_mapping_service),
+):
+    """Exports building map in JSON or GeoJSON format."""
+    try:
+        result = service.export_map(building_id=building_id, export_format=export_format, floor_id=floor_id)
+        return result
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 
 

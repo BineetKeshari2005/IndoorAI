@@ -110,6 +110,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Site-Specific Wi-Fi Localization](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/SITE_SPECIFIC_WIFI_LOCALIZATION.md): Site reference locations, radio map builder, multi-sweep signal statistics, weighted k-NN, probabilistic Gaussian matching, and session-partitioned offline evaluation.
 - [Wi-Fi + PDR Sensor Fusion (EKF)](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/WIFI_PDR_SENSOR_FUSION.md): Extended Kalman Filter combining continuous PDR kinematics with discrete Wi-Fi fingerprinting, Joseph form covariance updates, Chi-Square 2-DOF outlier gating, 4-tier uncertainty hierarchy, and calibrated 95% confidence ellipses.
 - [Computer Vision & Landmark Detection](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/COMPUTER_VISION_LANDMARK_DETECTION.md): Indoor landmark detection taxonomy (doors, stairs, elevators, signage), signboard OCR engine, persistent landmark registry with manual verification, and visual feature matching.
+- [Indoor Map Generation & Spatial Representation](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_MAP_GENERATION_AND_SPATIAL_REPRESENTATION.md): Metric 2D floorplans, topological navigation graphs, vertical transitions (stairs and elevators), geometric validation, atomic filesystem persistence, and RFC 7946 GeoJSON export.
 
 ---
 

@@ -754,6 +754,178 @@ class DatasetApiClient:
             logger.error("Connection error evaluating vision: %s", e)
             raise DatasetApiClientException(f"Connection error evaluating vision: {e}")
 
+    # =====================================================================
+    # Task 26: Indoor Map Generation & Spatial Representation
+    # =====================================================================
+
+    def list_indoor_maps(self, dataset_id: str = "default") -> List[Dict[str, Any]]:
+        """Lists metadata summaries for all building maps."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/buildings"
+        try:
+            res = self._request("GET", url, timeout=15.0)
+            if res.status_code == 200:
+                return res.json()
+            return []
+        except Exception as e:
+            logger.warning("Error fetching indoor maps: %s", e)
+            return []
+
+    def get_indoor_map(self, dataset_id: str, building_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves comprehensive building map definition."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}"
+        try:
+            res = self._request("GET", url, timeout=15.0)
+            if res.status_code == 200:
+                return res.json()
+            return None
+        except Exception as e:
+            logger.warning("Error fetching building map %s: %s", building_id, e)
+            return None
+
+    def create_or_update_building_map(
+        self, dataset_id: str, payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Creates or updates an indoor building map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/buildings"
+        res = self._request("POST", url, json=payload, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to create building map: HTTP {res.status_code}", details=res.text)
+
+    def add_map_floor(
+        self, dataset_id: str, building_id: str, floor_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Adds a floor level to the building map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/floors?building_id={building_id}"
+        res = self._request("POST", url, json=floor_data, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to add floor: HTTP {res.status_code}", details=res.text)
+
+    def add_map_room(
+        self, dataset_id: str, building_id: str, room_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Adds a room polygon to the building floor."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/rooms?building_id={building_id}"
+        res = self._request("POST", url, json=room_data, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to add room: HTTP {res.status_code}", details=res.text)
+
+    def add_map_corridor(
+        self, dataset_id: str, building_id: str, corridor_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Adds a corridor to the building floor."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/corridors?building_id={building_id}"
+        res = self._request("POST", url, json=corridor_data, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to add corridor: HTTP {res.status_code}", details=res.text)
+
+    def add_map_door(
+        self, dataset_id: str, building_id: str, door_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Adds a door to the building floor."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/doors?building_id={building_id}"
+        res = self._request("POST", url, json=door_data, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to add door: HTTP {res.status_code}", details=res.text)
+
+    def add_map_vertical_transition(
+        self, dataset_id: str, building_id: str, vt_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Adds a vertical transition (staircase / elevator)."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/vertical-transitions?building_id={building_id}"
+        res = self._request("POST", url, json=vt_data, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to add vertical transition: HTTP {res.status_code}", details=res.text)
+
+    def add_map_connection(
+        self, dataset_id: str, building_id: str, conn_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Adds a topological connection edge."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/connections?building_id={building_id}"
+        res = self._request("POST", url, json=conn_data, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to add connection: HTTP {res.status_code}", details=res.text)
+
+    def import_wifi_references_to_map(
+        self, dataset_id: str, building_id: str, import_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Imports Wi-Fi reference points into floor map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/import-wifi"
+        res = self._request("POST", url, json=import_data, timeout=30.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to import Wi-Fi references: HTTP {res.status_code}", details=res.text)
+
+    def import_landmarks_to_map(
+        self, dataset_id: str, building_id: str, import_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Imports verified visual landmarks into floor map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/import-landmarks"
+        res = self._request("POST", url, json=import_data, timeout=30.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to import landmarks: HTTP {res.status_code}", details=res.text)
+
+    def validate_indoor_map(self, dataset_id: str, building_id: str) -> Dict[str, Any]:
+        """Runs geometric and topological validation on the building map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/validate"
+        res = self._request("POST", url, timeout=20.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Map validation failed: HTTP {res.status_code}", details=res.text)
+
+    def evaluate_indoor_map(self, dataset_id: str, building_id: str) -> Dict[str, Any]:
+        """Evaluates quantitative coverage and topological connectivity metrics."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/evaluate"
+        res = self._request("POST", url, timeout=20.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Map evaluation failed: HTTP {res.status_code}", details=res.text)
+
+    def publish_indoor_map_version(
+        self, dataset_id: str, building_id: str, publish_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Publishes an immutable version release snapshot."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/publish"
+        res = self._request("POST", url, json=publish_data or {}, timeout=20.0)
+        if res.status_code in (200, 201):
+            return res.json()
+        raise DatasetApiClientException(f"Failed to publish map version: HTTP {res.status_code}", details=res.text)
+
+    def list_indoor_map_versions(self, dataset_id: str, building_id: str) -> List[Dict[str, Any]]:
+        """Lists version snapshot history for a building map."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/versions"
+        try:
+            res = self._request("GET", url, timeout=15.0)
+            if res.status_code == 200:
+                return res.json()
+            return []
+        except Exception as e:
+            logger.warning("Error fetching map versions: %s", e)
+            return []
+
+    def export_indoor_map(
+        self,
+        dataset_id: str,
+        building_id: str,
+        export_format: str = "json",
+        floor_id: Optional[int] = None,
+    ) -> Any:
+        """Exports building map as JSON string or GeoJSON FeatureCollection dictionary."""
+        params = f"?floor_id={floor_id}" if floor_id is not None else ""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/maps/{building_id}/export/{export_format}{params}"
+        res = self._request("GET", url, timeout=20.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to export map: HTTP {res.status_code}", details=res.text)
+
+
 
 
 
