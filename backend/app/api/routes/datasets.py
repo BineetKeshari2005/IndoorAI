@@ -56,12 +56,21 @@ from backend.app.schemas.wifi_survey import (
     WifiEvaluationResponse,
     WifiLocalizationQueryRequest,
 )
+from backend.app.schemas.sensor_fusion import (
+    FusedStateResponse,
+    FusionEvaluationRequest,
+    FusionEvaluationResponse,
+    FusionRunRequest,
+    FusionStatusResponse,
+    FusionTrajectoryResponse,
+)
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
 from backend.app.services.pdr_service import PDRService
 from backend.app.services.pdr_calibration_service import PDRCalibrationService
 from backend.app.services.preprocessing_service import PreprocessingService
+from backend.app.services.sensor_fusion_service import SensorFusionService
 from backend.app.services.wifi_survey_service import WifiSurveyService
 from src.core.logging import setup_logger
 
@@ -75,6 +84,7 @@ _preprocessing_service: Optional[PreprocessingService] = None
 _pdr_service: Optional[PDRService] = None
 _pdr_calibration_service: Optional[PDRCalibrationService] = None
 _wifi_survey_service: Optional[WifiSurveyService] = None
+_fusion_service: Optional[SensorFusionService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -115,6 +125,14 @@ def get_wifi_survey_service() -> WifiSurveyService:
     if _wifi_survey_service is None:
         _wifi_survey_service = WifiSurveyService()
     return _wifi_survey_service
+
+
+def get_sensor_fusion_service() -> SensorFusionService:
+    """Dependency provider for SensorFusionService (Task 24)."""
+    global _fusion_service
+    if _fusion_service is None:
+        _fusion_service = SensorFusionService()
+    return _fusion_service
 
 
 @router.post(
@@ -1015,6 +1033,172 @@ def evaluate_wifi_localization(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Evaluation failed: {e}",
         )
+
+
+# =========================================================================
+# Task 24: Wi-Fi + PDR Sensor Fusion Endpoints (Extended Kalman Filter)
+# =========================================================================
+
+@router.post(
+    "/{dataset_id}/fusion/run",
+    response_model=FusionTrajectoryResponse,
+    summary="Run Wi-Fi + PDR Extended Kalman Filter fusion",
+    description="Combines continuous PDR step displacements with site-specific Wi-Fi position observations using EKF and statistical outlier gating."
+)
+def run_sensor_fusion(
+    dataset_id: str,
+    fusion_req: FusionRunRequest,
+    service: SensorFusionService = Depends(get_sensor_fusion_service),
+) -> FusionTrajectoryResponse:
+    """Executes EKF sensor fusion on survey dataset."""
+    try:
+        fused_states, summary = service.run_fusion(dataset_id=dataset_id, request=fusion_req)
+        resp_trajectory = [
+            FusedStateResponse(
+                timestamp_epoch_ms=s.timestamp_epoch_ms,
+                building_id=s.building_id,
+                floor_id=s.floor_id,
+                x_m=s.x_m,
+                y_m=s.y_m,
+                theta_deg=s.theta_deg,
+                sigma_x_m=s.sigma_x_m,
+                sigma_y_m=s.sigma_y_m,
+                status=s.status.value,
+                semi_major_axis_m=s.ellipse.semi_major_axis_m,
+                semi_minor_axis_m=s.ellipse.semi_minor_axis_m,
+                ellipse_angle_deg=s.ellipse.ellipse_angle_deg,
+                conservative_95_radius_m=s.ellipse.conservative_95_radius_m,
+                mahalanobis_dist_sq=s.mahalanobis_dist_sq,
+                rejection_reason=s.rejection_reason,
+            )
+            for s in fused_states
+        ]
+        return FusionTrajectoryResponse(
+            dataset_id=dataset_id,
+            total_points=len(resp_trajectory),
+            summary=summary.to_dict(),
+            trajectory=resp_trajectory,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Sensor fusion failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Sensor fusion failed: {e}",
+        )
+
+
+@router.get(
+    "/{dataset_id}/fusion/status",
+    response_model=FusionStatusResponse,
+    summary="Get sensor fusion status and summary",
+    description="Checks whether a fused trajectory has been computed and saved for the dataset."
+)
+def get_fusion_status(
+    dataset_id: str,
+    service: SensorFusionService = Depends(get_sensor_fusion_service),
+) -> FusionStatusResponse:
+    """Retrieves current sensor fusion artifact status."""
+    return service.get_status(dataset_id=dataset_id)
+
+
+@router.get(
+    "/{dataset_id}/fusion/trajectory",
+    response_model=FusionTrajectoryResponse,
+    summary="Get fused trajectory points",
+    description="Retrieves computed EKF trajectory points with confidence ellipses and fusion statuses."
+)
+def get_fused_trajectory(
+    dataset_id: str,
+    limit: int = Query(5000, ge=1, le=20000, description="Maximum trajectory points to return"),
+    service: SensorFusionService = Depends(get_sensor_fusion_service),
+) -> FusionTrajectoryResponse:
+    """Retrieves stored fused trajectory points."""
+    status_resp = service.get_status(dataset_id=dataset_id)
+    if not status_resp.is_available:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Fused trajectory not found for dataset '{dataset_id}'. Run POST /{dataset_id}/fusion/run first.",
+        )
+    points = service.get_trajectory(dataset_id=dataset_id, limit=limit)
+    resp_trajectory = []
+    for p in points:
+        ellipse_d = p.get("ellipse", {})
+        resp_trajectory.append(
+            FusedStateResponse(
+                timestamp_epoch_ms=int(p.get("timestamp_epoch_ms", p.get("timestamp_ms", 0))),
+                building_id=str(p.get("building_id", "BLDG-1")),
+                floor_id=int(p.get("floor_id", 1)),
+                x_m=float(p.get("x_m", 0.0)),
+                y_m=float(p.get("y_m", 0.0)),
+                theta_deg=float(p.get("theta_deg", 0.0)),
+                sigma_x_m=float(p.get("sigma_x_m", 1.0)),
+                sigma_y_m=float(p.get("sigma_y_m", 1.0)),
+                status=str(p.get("status", "PDR_ONLY")),
+                semi_major_axis_m=float(ellipse_d.get("semi_major_axis_m", p.get("semi_major_axis_m", 1.0))),
+                semi_minor_axis_m=float(ellipse_d.get("semi_minor_axis_m", p.get("semi_minor_axis_m", 1.0))),
+                ellipse_angle_deg=float(ellipse_d.get("ellipse_angle_deg", p.get("ellipse_angle_deg", 0.0))),
+                conservative_95_radius_m=float(ellipse_d.get("conservative_95_radius_m", p.get("conservative_95_radius_m", 1.0))),
+                mahalanobis_dist_sq=p.get("mahalanobis_dist_sq"),
+                rejection_reason=p.get("rejection_reason"),
+            )
+        )
+    return FusionTrajectoryResponse(
+        dataset_id=dataset_id,
+        total_points=len(resp_trajectory),
+        summary=status_resp.summary or {},
+        trajectory=resp_trajectory,
+    )
+
+
+@router.post(
+    "/{dataset_id}/fusion/evaluate",
+    response_model=FusionEvaluationResponse,
+    summary="Run comparative evaluation across PDR-only, Wi-Fi-only, and Fused",
+    description="Quantifies position error, endpoint error, drift per meter, outlier rejection rate, and uncertainty coverage."
+)
+def evaluate_sensor_fusion(
+    dataset_id: str,
+    eval_req: FusionEvaluationRequest,
+    service: SensorFusionService = Depends(get_sensor_fusion_service),
+) -> FusionEvaluationResponse:
+    """Executes comparative trajectory evaluation."""
+    try:
+        report = service.evaluate(dataset_id=dataset_id, request=eval_req)
+        return FusionEvaluationResponse(
+            dataset_id=dataset_id,
+            report=report.to_dict(),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Fusion evaluation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Fusion evaluation failed: {e}",
+        )
+
+
+@router.get(
+    "/{dataset_id}/fusion/evaluation",
+    response_model=FusionEvaluationResponse,
+    summary="Get recent sensor fusion evaluation report",
+    description="Retrieves comparative evaluation report for dataset."
+)
+def get_fusion_evaluation(
+    dataset_id: str,
+    site_id: str = Query("SITE-DEFAULT", description="Site identifier"),
+    service: SensorFusionService = Depends(get_sensor_fusion_service),
+) -> FusionEvaluationResponse:
+    """Retrieves evaluation report for dataset."""
+    req = FusionEvaluationRequest(site_id=site_id, use_synthetic_fixture=True)
+    report = service.evaluate(dataset_id=dataset_id, request=req)
+    return FusionEvaluationResponse(
+        dataset_id=dataset_id,
+        report=report.to_dict(),
+    )
+
 
 
 

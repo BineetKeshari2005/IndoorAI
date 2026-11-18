@@ -108,6 +108,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [PDR Engine Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_ENGINE_ARCHITECTURE.md): Pedestrian Dead Reckoning (PDR) engine, coordinate frames, gravity separation, Butterworth filtering, Weinberg step length model, heading estimation, 2D relative dead reckoning, and spatial covariance propagation.
 - [PDR Calibration and Validation](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_CALIBRATION_AND_VALIDATION.md): Empirical Weinberg stride calibration, ground-truth walking trials, step/heading precision, trajectory drift analysis, and 95% spatial confidence ellipses.
 - [Site-Specific Wi-Fi Localization](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/SITE_SPECIFIC_WIFI_LOCALIZATION.md): Site reference locations, radio map builder, multi-sweep signal statistics, weighted k-NN, probabilistic Gaussian matching, and session-partitioned offline evaluation.
+- [Wi-Fi + PDR Sensor Fusion (EKF)](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/WIFI_PDR_SENSOR_FUSION.md): Extended Kalman Filter combining continuous PDR kinematics with discrete Wi-Fi fingerprinting, Joseph form covariance updates, Chi-Square 2-DOF outlier gating, 4-tier uncertainty hierarchy, and calibrated 95% confidence ellipses.
 
 ---
 

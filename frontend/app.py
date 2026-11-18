@@ -39,6 +39,7 @@ from frontend.components.pdr_view import render_pdr_view
 from frontend.components.photo_view import render_photos_and_annotations
 from frontend.components.preprocessing_view import render_preprocessing_view
 from frontend.components.quality_view import render_quality_dashboard
+from frontend.components.sensor_fusion_view import render_sensor_fusion_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
@@ -795,6 +796,7 @@ def render_multimodal_workspace() -> None:
             "11. PDR & Movement Analysis",
             "12. PDR Calibration & Validation",
             "13. Site-Specific Wi-Fi Localization",
+            "14. Wi-Fi + PDR Sensor Fusion",
         ]
         selected_sec = st.radio("Navigation", sections, index=0)
 
@@ -805,12 +807,13 @@ def render_multimodal_workspace() -> None:
         st.info("● PDR Kinematics: Task 21 Ready")
         st.info("● PDR Calibration: Task 22 Ready")
         st.info("● Site Wi-Fi Radio Map: Task 23 Ready")
-        st.caption("IndoorAI Multimodal Explorer v1.6.0")
+        st.info("● EKF Sensor Fusion: Task 24 Ready")
+        st.caption("IndoorAI Multimodal Explorer v1.7.0")
 
     # Main Header
     st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–23)</div>',
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–24)</div>',
         unsafe_allow_html=True
     )
 
@@ -842,6 +845,8 @@ def render_multimodal_workspace() -> None:
         render_pdr_calibration_view(client, selected_dataset_id)
     elif selected_sec == "13. Site-Specific Wi-Fi Localization":
         render_wifi_localization_view(client, selected_dataset_id)
+    elif selected_sec == "14. Wi-Fi + PDR Sensor Fusion":
+        render_sensor_fusion_view(client, selected_dataset_id)
 
 
 def render_benchmark_workspace() -> None:

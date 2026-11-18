@@ -8,6 +8,7 @@ from frontend.components.pdr_view import render_pdr_view
 from frontend.components.photo_view import render_photos_and_annotations
 from frontend.components.preprocessing_view import render_preprocessing_view
 from frontend.components.quality_view import render_quality_dashboard
+from frontend.components.sensor_fusion_view import render_sensor_fusion_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
@@ -28,4 +29,5 @@ __all__ = [
     "render_pdr_view",
     "render_pdr_calibration_view",
     "render_wifi_localization_view",
+    "render_sensor_fusion_view",
 ]

@@ -552,5 +552,85 @@ class DatasetApiClient:
             logger.error("Connection error during Wi-Fi evaluation: %s", e)
             raise DatasetApiClientException(f"Connection error during evaluation: {e}")
 
+    # -------------------------------------------------------------------------
+    # Task 24: Wi-Fi + PDR Sensor Fusion API Methods (Extended Kalman Filter)
+    # -------------------------------------------------------------------------
+
+    def run_sensor_fusion(
+        self, dataset_id: str, fusion_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Executes EKF sensor fusion combining PDR step kinematics with Wi-Fi positioning."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/fusion/run"
+        try:
+            res = self._request("POST", url, json=fusion_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Fusion execution failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error running sensor fusion for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error running sensor fusion: {e}")
+
+    def get_fusion_status(self, dataset_id: str) -> Dict[str, Any]:
+        """Retrieves sensor fusion artifact availability and summary."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/fusion/status"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            return {"dataset_id": dataset_id, "is_available": False, "summary": None, "artifact_paths": {}}
+        except httpx.RequestError as e:
+            logger.warning("Error fetching fusion status for %s: %s", dataset_id, e)
+            return {"dataset_id": dataset_id, "is_available": False, "summary": None, "artifact_paths": {}}
+
+    def get_fused_trajectory(
+        self, dataset_id: str, limit: int = 5000
+    ) -> List[Dict[str, Any]]:
+        """Retrieves fused trajectory points for visualization."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/fusion/trajectory?limit={limit}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json().get("trajectory", [])
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching fused trajectory for %s: %s", dataset_id, e)
+            return []
+
+    def evaluate_sensor_fusion(
+        self, dataset_id: str, eval_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Runs comparative trajectory evaluation comparing PDR-only, Wi-Fi-only, and Fused."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/fusion/evaluate"
+        try:
+            res = self._request("POST", url, json=eval_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Fusion evaluation failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error evaluating sensor fusion for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error evaluating sensor fusion: {e}")
+
+    def get_fusion_evaluation_report(
+        self, dataset_id: str, site_id: str = "SITE-DEFAULT"
+    ) -> Dict[str, Any]:
+        """Retrieves evaluation report for dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/fusion/evaluation?site_id={site_id}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json().get("report", {})
+            return {}
+        except httpx.RequestError as e:
+            logger.warning("Error fetching evaluation report for %s: %s", dataset_id, e)
+            return {}
+
 
 
