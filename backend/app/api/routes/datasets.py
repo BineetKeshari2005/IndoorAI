@@ -64,6 +64,18 @@ from backend.app.schemas.sensor_fusion import (
     FusionStatusResponse,
     FusionTrajectoryResponse,
 )
+from backend.app.schemas.computer_vision import (
+    LandmarkDetectionSchema,
+    LandmarkRecordSchema,
+    LandmarkVerifyRequest,
+    VisionAnalyzeRequest,
+    VisionAnalyzeResponse,
+    VisionEvaluateRequest,
+    VisionEvaluateResponse,
+    VisualMatchRequest,
+    VisualMatchResponse,
+)
+from backend.app.services.computer_vision_service import ComputerVisionService
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
@@ -85,6 +97,7 @@ _pdr_service: Optional[PDRService] = None
 _pdr_calibration_service: Optional[PDRCalibrationService] = None
 _wifi_survey_service: Optional[WifiSurveyService] = None
 _fusion_service: Optional[SensorFusionService] = None
+_vision_service: Optional[ComputerVisionService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -133,6 +146,14 @@ def get_sensor_fusion_service() -> SensorFusionService:
     if _fusion_service is None:
         _fusion_service = SensorFusionService()
     return _fusion_service
+
+
+def get_computer_vision_service() -> ComputerVisionService:
+    """Dependency provider for ComputerVisionService (Task 25)."""
+    global _vision_service
+    if _vision_service is None:
+        _vision_service = ComputerVisionService()
+    return _vision_service
 
 
 @router.post(
@@ -1198,6 +1219,150 @@ def get_fusion_evaluation(
         dataset_id=dataset_id,
         report=report.to_dict(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 25: Computer Vision-Based Indoor Landmark Detection Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{dataset_id}/vision/analyze",
+    response_model=VisionAnalyzeResponse,
+    summary="Detect indoor landmarks and recognize signs across survey photos",
+    description="Loads privacy-sanitized survey photos, runs landmark detection and OCR, and extracts descriptors."
+)
+def analyze_dataset_vision(
+    dataset_id: str,
+    analyze_req: Optional[VisionAnalyzeRequest] = None,
+    service: ComputerVisionService = Depends(get_computer_vision_service),
+) -> VisionAnalyzeResponse:
+    """Runs landmark detection and OCR on survey photographs."""
+    try:
+        return service.analyze_dataset(dataset_id=dataset_id, request_params=analyze_req)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Vision analysis failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Vision analysis failed: {e}",
+        )
+
+
+@router.get(
+    "/{dataset_id}/vision/detections",
+    response_model=List[LandmarkDetectionSchema],
+    summary="Get landmark detections for a survey dataset",
+    description="Retrieves computed landmark candidates with bounding boxes, confidence scores, and OCR text."
+)
+def get_dataset_landmark_detections(
+    dataset_id: str,
+    category: Optional[str] = Query(None, description="Optional landmark category filter"),
+    service: ComputerVisionService = Depends(get_computer_vision_service),
+) -> List[LandmarkDetectionSchema]:
+    """Retrieves computed landmark detections."""
+    try:
+        return service.get_detections(dataset_id=dataset_id, category=category)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to retrieve landmark detections: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve landmark detections: {e}",
+        )
+
+
+@router.get(
+    "/{dataset_id}/vision/landmarks",
+    response_model=List[LandmarkRecordSchema],
+    summary="List registered landmarks in building landmark registry",
+    description="Queries persistent landmark registry with optional building, floor, category, and verification status filters."
+)
+def list_registered_landmarks(
+    dataset_id: str,
+    building_id: Optional[str] = Query(None, description="Building ID filter"),
+    floor_id: Optional[int] = Query(None, description="Floor ID filter"),
+    category: Optional[str] = Query(None, description="Landmark category filter"),
+    status: Optional[str] = Query(None, description="Verification status (UNVERIFIED, MANUALLY_VERIFIED, REJECTED)"),
+    service: ComputerVisionService = Depends(get_computer_vision_service),
+) -> List[LandmarkRecordSchema]:
+    """Queries registered landmarks."""
+    return service.list_landmarks(
+        building_id=building_id,
+        floor_id=floor_id,
+        category=category,
+        status=status,
+    )
+
+
+@router.post(
+    "/{dataset_id}/vision/landmarks/verify",
+    response_model=LandmarkRecordSchema,
+    summary="Manually verify, update, or reject a registered landmark",
+    description="Associates ground-truth coordinates, verified name, and manual verification status with a landmark record."
+)
+def verify_landmark_record(
+    dataset_id: str,
+    verify_req: LandmarkVerifyRequest,
+    service: ComputerVisionService = Depends(get_computer_vision_service),
+) -> LandmarkRecordSchema:
+    """Manually updates or confirms a landmark record."""
+    updated = service.verify_landmark(request_params=verify_req)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Landmark with ID '{verify_req.landmark_id}' not found in registry.",
+        )
+    return updated
+
+
+@router.post(
+    "/{dataset_id}/vision/match",
+    response_model=VisualMatchResponse,
+    summary="Match survey photo against registered indoor landmarks",
+    description="Computes visual feature similarity and descriptor inliers against registered landmarks."
+)
+def match_survey_photo(
+    dataset_id: str,
+    match_req: VisualMatchRequest,
+    service: ComputerVisionService = Depends(get_computer_vision_service),
+) -> VisualMatchResponse:
+    """Compares a photo against registered landmarks."""
+    try:
+        return service.match_photo(dataset_id=dataset_id, request_params=match_req)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Visual matching failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Visual matching failed: {e}",
+        )
+
+
+@router.post(
+    "/{dataset_id}/vision/evaluate",
+    response_model=VisionEvaluateResponse,
+    summary="Run computer vision evaluation on detection, OCR, and matching",
+    description="Calculates multi-class precision, recall, F1, mean IoU, confusion matrix, and OCR character error rate."
+)
+def evaluate_computer_vision(
+    dataset_id: str,
+    eval_req: VisionEvaluateRequest,
+    service: ComputerVisionService = Depends(get_computer_vision_service),
+) -> VisionEvaluateResponse:
+    """Evaluates computer vision performance."""
+    try:
+        return service.evaluate_vision(request_params=eval_req)
+    except Exception as e:
+        logger.error(f"Vision evaluation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Vision evaluation failed: {e}",
+        )
+
 
 
 

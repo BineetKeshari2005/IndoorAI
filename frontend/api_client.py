@@ -632,5 +632,128 @@ class DatasetApiClient:
             logger.warning("Error fetching evaluation report for %s: %s", dataset_id, e)
             return {}
 
+    # -------------------------------------------------------------------------
+    # Task 25: Computer Vision & Indoor Landmark Detection API Methods
+    # -------------------------------------------------------------------------
+
+    def analyze_vision(
+        self, dataset_id: str, analyze_params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Runs landmark detection and OCR on survey photographs."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/vision/analyze"
+        payload = analyze_params or {}
+        try:
+            res = self._request("POST", url, json=payload, timeout=90.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Vision analysis failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error running vision analysis for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error running vision analysis: {e}")
+
+    def get_vision_detections(
+        self, dataset_id: str, category: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieves computed landmark candidates for a dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/vision/detections"
+        if category:
+            url += f"?category={category}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching landmark detections for %s: %s", dataset_id, e)
+            return []
+
+    def list_landmarks(
+        self,
+        dataset_id: str,
+        building_id: Optional[str] = None,
+        floor_id: Optional[int] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Queries persistent landmarks in the landmark registry."""
+        params = []
+        if building_id:
+            params.append(f"building_id={building_id}")
+        if floor_id is not None:
+            params.append(f"floor_id={floor_id}")
+        if category:
+            params.append(f"category={category}")
+        if status:
+            params.append(f"status={status}")
+        query_str = ("?" + "&".join(params)) if params else ""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/vision/landmarks{query_str}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching landmarks: %s", e)
+            return []
+
+    def verify_landmark(
+        self, dataset_id: str, verify_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Manually updates or verifies a landmark record."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/vision/landmarks/verify"
+        try:
+            res = self._request("POST", url, json=verify_data, timeout=30.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Failed to verify landmark: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error verifying landmark: %s", e)
+            raise DatasetApiClientException(f"Connection error verifying landmark: {e}")
+
+    def match_survey_photo(
+        self, dataset_id: str, match_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Matches a survey photo against registered landmarks."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/vision/match"
+        try:
+            res = self._request("POST", url, json=match_data, timeout=30.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Visual matching failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error matching photo: %s", e)
+            raise DatasetApiClientException(f"Connection error matching photo: {e}")
+
+    def evaluate_vision(
+        self, dataset_id: str, eval_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Runs evaluation for landmark detection, OCR, and matching."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/vision/evaluate"
+        try:
+            res = self._request("POST", url, json=eval_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Vision evaluation failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text,
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error evaluating vision: %s", e)
+            raise DatasetApiClientException(f"Connection error evaluating vision: {e}")
+
+
 
 

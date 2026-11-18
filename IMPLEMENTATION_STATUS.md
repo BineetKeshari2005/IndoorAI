@@ -3,9 +3,9 @@
 This document tracks progress across all 30 implementation tasks defined in the [Development Roadmap](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DEVELOPMENT_ROADMAP.md).
 
 **Summary Progress:**
-- **Completed:** 24 / 30 tasks (80.0%)
+- **Completed:** 25 / 30 tasks (83.3%)
 - **In Progress:** 0 / 30 tasks
-- **Not Started:** 6 / 30 tasks
+- **Not Started:** 5 / 30 tasks
 
 ---
 
@@ -37,7 +37,7 @@ This document tracks progress across all 30 implementation tasks defined in the 
 | **Task 22** | **PDR Calibration, Ground-Truth Validation & Drift Analysis** | **Phase 6** | **COMPLETED** | **2026-11-18** |
 | **Task 23** | **Site-Specific Wi-Fi Radio Map & Fingerprint Localization** | **Phase 6** | **COMPLETED** | **2026-11-18** |
 | **Task 24** | **Wi-Fi + PDR Sensor Fusion using an Extended Kalman Filter** | **Phase 7** | **COMPLETED** | **2026-11-18** |
-| Task 25 | Multimodal Joint Training & Uncertainty Calibration | Phase 7 | NOT STARTED | Planned |
+| **Task 25** | **Computer Vision-Based Indoor Landmark Detection** | **Phase 7** | **COMPLETED** | **2026-11-18** |
 | Task 26 | Topological-Metric Spatial Floorplan Mapping Engine | Phase 7 | NOT STARTED | Planned |
 | Task 27 | FastAPI Core Backend, Database Models & Device Auth | Phase 8 | NOT STARTED | Planned |
 | Task 28 | Real-Time Ingestion & Inference Endpoints | Phase 8 | NOT STARTED | Planned |
@@ -611,6 +611,39 @@ This document tracks progress across all 30 implementation tasks defined in the 
     - Full repository test run passing **217 tests** (201 previous + 16 new) with 0 failures, 0 errors, and zero regressions on baseline models.
   - Architectural Documentation:
     - [docs/WIFI_PDR_SENSOR_FUSION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/WIFI_PDR_SENSOR_FUSION.md) (Complete architectural and mathematical specification covering kinematic motion models, state transition Jacobians, Joseph form covariance updates, Chi-Square 2-DOF outlier rejection, 4-tier uncertainty hierarchy, 95% confidence ellipses, controlled benchmark results, REST endpoints, and UI dashboard).
+
+### Task 25: Computer Vision-Based Indoor Landmark Detection
+- **Status:** COMPLETED
+- **Completed On:** 2026-11-18
+- **Deliverables Created & Enhanced:**
+  - Dedicated Computer Vision Package (`src/computer_vision/`):
+    - [src/computer_vision/models.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/models.py) (`LandmarkCategory` 11-class taxonomy: `DOOR`, `ROOM_ENTRANCE`, `STAIRCASE`, `ELEVATOR`, `CORRIDOR`, `INTERSECTION`, `ROOM_NUMBER_SIGN`, `DIRECTION_SIGN`, `EXIT_SIGN`, `DISTINCTIVE_STRUCTURE`, `UNKNOWN`; `VerificationStatus`, `VisualMatchStatus`, `BoundingBox`, `OcrTextRecord`, `LandmarkDetection`, `LandmarkRecord`, `VisualMatchCandidate`, `VisualMatchReport`, `CategoryEvaluationMetrics`, `VisionEvaluationReport`).
+    - [src/computer_vision/image_validation.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/image_validation.py) (`ImagePrivacyValidator` verifying `is_exif_sanitized` from survey metadata, allowed extensions `.jpg`/`.png`/`.webp`, magic numbers, dimension bounds 32px–8192px, file size bounds 512B–25MB, and path traversal rejection).
+    - [src/computer_vision/image_loader.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/image_loader.py) (`SafeImageLoader` loading orientation-transposed RGB/BGR NumPy arrays respecting privacy barriers).
+    - [src/computer_vision/preprocessing.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/preprocessing.py) (`ImagePreprocessor` applying CLAHE contrast enhancement in LAB space, aspect-ratio preserving resizing, normalized bounding box cropping with margin, and visual overlay drawing).
+    - [src/computer_vision/feature_extraction.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/feature_extraction.py) (`VisualFeatureExtractor` extracting up to 500 ORB keypoints/descriptors with FAST/Harris scoring and 512-dim normalized 3D HSV color histogram embeddings).
+    - [src/computer_vision/ocr_engine.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/ocr_engine.py) (`SignboardOcrEngine` integrating EasyOCR for text recognition on room plates and directional signs, with OpenCV morphological stroke gradient fallback; strict policy maintaining OCR output as unverified until manual confirmation).
+    - [src/computer_vision/landmark_detector.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/landmark_detector.py) (`LandmarkDetector` with dual-stage architecture: fine-tuned Ultralytics YOLO interface + architectural heuristic detector finding door frames, corridor perspective vanishing lines, and sign plaques; NMS deduplication at configurable IoU).
+    - [src/computer_vision/landmark_classifier.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/landmark_classifier.py) (`LandmarkClassifier` taxonomy parsing, metadata sanitation, and strict rule: never inventing building/floor labels from appearance alone).
+    - [src/computer_vision/landmark_registry.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/landmark_registry.py) (`LandmarkRegistry` managing persistent building landmark records under `data/landmarks/{building_id}/landmarks.json`, lifecycle `UNVERIFIED` -> `MANUALLY_VERIFIED` / `REJECTED`, and anti-duplication guards).
+    - [src/computer_vision/landmark_matching.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/landmark_matching.py) (`VisualLandmarkMatcher` computing appearance similarity, ORB descriptor inliers, and returning `STRONG_MATCH`, `WEAK_MATCH`, or `NO_MATCH` without claiming probabilities).
+    - [src/computer_vision/evaluation.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/evaluation.py) (`VisionEvaluator` calculating multi-class precision, recall, F1 at IoU >= 0.50, category confusion matrix, OCR CER via Levenshtein distance, visual matching precision/recall, and generating strictly partitioned synthetic benchmarks).
+    - [src/computer_vision/pipeline.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/pipeline.py) (`VisionPipeline` orchestrating privacy validation, loading, detection, OCR, descriptor extraction, and batch survey photo processing).
+    - [src/computer_vision/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/computer_vision/__init__.py) (Clean package public exports).
+  - Backend API Schemas & Service Endpoints:
+    - [backend/app/schemas/computer_vision.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/schemas/computer_vision.py) (Pydantic models: `BoundingBoxSchema`, `OcrTextSchema`, `LandmarkDetectionSchema`, `VisionAnalyzeRequest`, `VisionAnalyzeResponse`, `LandmarkRecordSchema`, `LandmarkVerifyRequest`, `VisualMatchCandidateSchema`, `VisualMatchRequest`, `VisualMatchResponse`, `VisionEvaluateRequest`, `VisionEvaluateResponse`).
+    - [backend/app/services/computer_vision_service.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/services/computer_vision_service.py) (`ComputerVisionService` managing survey batch analysis, parquet artifact persistence, registry queries, manual verification, visual matching, and evaluation).
+    - [backend/app/api/routes/datasets.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/api/routes/datasets.py) (Added 6 REST endpoints: `POST /vision/analyze`, `GET /vision/detections`, `GET /vision/landmarks`, `POST /vision/landmarks/verify`, `POST /vision/match`, `POST /vision/evaluate`).
+  - Frontend UI & Visualizations:
+    - [frontend/api_client.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/api_client.py) (Added client methods: `analyze_vision`, `get_vision_detections`, `list_landmarks`, `verify_landmark`, `match_survey_photo`, `evaluate_vision`).
+    - [frontend/components/computer_vision_view.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/computer_vision_view.py) (Interactive Section 15 dashboard view with 5 tabs: Image Gallery & Detection Overlay, Pipeline Execution & Batch Analysis, Landmark Registry & Manual Verification, Visual Descriptor Matching Testbed, and Performance Evaluation & Confusion Matrix).
+    - [frontend/components/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/__init__.py) and [frontend/app.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/app.py) (Registered `15. Computer Vision & Landmarks` in sidebar navigation).
+  - Testing & Verification:
+    - [tests/test_computer_vision.py](file:///Users/bineetkeshari/Desktop/IndoorAI/tests/test_computer_vision.py) (22 comprehensive unit and API integration tests covering bounding box geometry, IoU, privacy rejection of unsanitized photos, corrupt file handling, landmark detector heuristics, unverified OCR policy, registry persistence and manual verification, visual descriptor matching and NO_MATCH behavior, session-level partitioned evaluation, and all 6 FastAPI REST endpoints).
+    - Full repository test run passing **239 tests** (217 previous + 22 new) with 0 failures, 0 errors, and zero regressions on baseline models.
+  - Architectural Documentation:
+    - [docs/COMPUTER_VISION_LANDMARK_DETECTION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/COMPUTER_VISION_LANDMARK_DETECTION.md) (Complete specification covering image-processing architecture, privacy-by-design requirements, landmark taxonomy, detector heuristics, OCR pipeline, persistent registry schemas, visual matching methodology, session holdout evaluation, REST API reference, and UI dashboard).
+
 
 
 
