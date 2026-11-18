@@ -1109,6 +1109,114 @@ class DatasetApiClient:
             return res.json()
         raise DatasetApiClientException(f"Failed to get navigation evaluation: HTTP {res.status_code}", details=res.text)
 
+    # -------------------------------------------------------------------------
+    # Task 29: Real-Time Ingestion & Streaming API Methods
+    # -------------------------------------------------------------------------
+
+    def list_realtime_sessions(self) -> List[str]:
+        """Lists all active streaming sessions."""
+        url = f"{self.base_url}/api/realtime/sessions"
+        try:
+            res = self._request("GET", url, timeout=10.0)
+            if res.status_code == 200:
+                return res.json().get("active_session_ids", [])
+            return []
+        except Exception as e:
+            logger.warning("Error listing realtime sessions: %s", e)
+            return []
+
+    def get_realtime_status(self, session_id: str) -> Dict[str, Any]:
+        """Retrieves real-time stream throughput metrics and buffer status."""
+        url = f"{self.base_url}/api/realtime/sessions/{session_id}/status"
+        res = self._request("GET", url, timeout=10.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to get realtime status: HTTP {res.status_code}", details=res.text)
+
+    def control_realtime_session(
+        self,
+        session_id: str,
+        action: str,
+        note: Optional[str] = None,
+        building_id: Optional[str] = None,
+        floor_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Sends lifecycle control action (START, PAUSE, RESUME, STOP, CANCEL, RESET) to streaming session."""
+        url = f"{self.base_url}/api/realtime/sessions/{session_id}/control"
+        payload = {
+            "action": action,
+            "note": note,
+            "building_id": building_id,
+            "floor_id": floor_id,
+        }
+        res = self._request("POST", url, json=payload, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to control realtime session: HTTP {res.status_code}", details=res.text)
+
+    def ingest_realtime_batch(
+        self,
+        session_id: str,
+        events: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Submits batch of observation events via REST fallback."""
+        url = f"{self.base_url}/api/realtime/sessions/{session_id}/events/batch"
+        res = self._request("POST", url, json={"events": events}, timeout=30.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to ingest realtime batch: HTTP {res.status_code}", details=res.text)
+
+    def get_realtime_history(
+        self,
+        session_id: str,
+        last_ack_event_id: Optional[str] = None,
+        max_items: int = 100,
+    ) -> Dict[str, Any]:
+        """Fetches recent processed events and replay history."""
+        url = f"{self.base_url}/api/realtime/sessions/{session_id}/history?max_items={max_items}"
+        if last_ack_event_id:
+            url += f"&last_ack_event_id={last_ack_event_id}"
+        res = self._request("GET", url, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to get realtime history: HTTP {res.status_code}", details=res.text)
+
+    def simulate_realtime_step(
+        self,
+        session_id: str,
+        x_m: float,
+        y_m: float,
+        floor_id: int,
+        heading_rad: float = 0.0,
+        uncertainty_radius_m: float = 2.0,
+    ) -> Dict[str, Any]:
+        """Injects a simulated step for testing."""
+        url = f"{self.base_url}/api/realtime/sessions/{session_id}/simulate"
+        payload = {
+            "x_m": x_m,
+            "y_m": y_m,
+            "floor_id": floor_id,
+            "heading_rad": heading_rad,
+            "uncertainty_radius_m": uncertainty_radius_m,
+        }
+        res = self._request("POST", url, json=payload, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to simulate realtime step: HTTP {res.status_code}", details=res.text)
+
+    def attach_realtime_navigation(
+        self,
+        session_id: str,
+        navigation_session_id: str,
+    ) -> Dict[str, Any]:
+        """Links active Task 28 navigation session to streaming session."""
+        url = f"{self.base_url}/api/realtime/sessions/{session_id}/attach-navigation"
+        res = self._request("POST", url, json={"navigation_session_id": navigation_session_id}, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to attach navigation to realtime: HTTP {res.status_code}", details=res.text)
+
+
 
 
 

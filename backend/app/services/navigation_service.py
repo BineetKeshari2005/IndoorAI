@@ -38,6 +38,16 @@ from src.navigation.pipeline import NavigationPipeline
 
 logger = setup_logger("NavigationService")
 
+_navigation_service_instance: Optional[NavigationService] = None
+
+
+def get_navigation_service() -> NavigationService:
+    """Dependency provider returning singleton instance of NavigationService."""
+    global _navigation_service_instance
+    if _navigation_service_instance is None:
+        _navigation_service_instance = NavigationService()
+    return _navigation_service_instance
+
 
 class NavigationService:
     """Manages indoor routing operations, destination search, live sessions, and evaluation."""

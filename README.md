@@ -114,6 +114,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Indoor Map Generation & Spatial Representation](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_MAP_GENERATION_AND_SPATIAL_REPRESENTATION.md): Metric 2D floorplans, topological navigation graphs, vertical transitions (stairs and elevators), geometric validation, atomic filesystem persistence, and RFC 7946 GeoJSON export.
 - [Map-Constrained Multimodal Localization (Particle Filter)](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MAP_CONSTRAINED_MULTIMODAL_LOCALIZATION.md): Sequential Monte Carlo particle filter enforcing building boundaries, solid wall collision checks, doorway passages, multi-floor vertical transitions, Wi-Fi observation likelihoods, and visual landmarks.
 - [Indoor Navigation & Intelligent Route Planning](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_NAVIGATION_AND_ROUTE_PLANNING.md): Dijkstra and A* graph search, multi-criteria cost functions, anti-fabrication solid wall audits, accessibility evaluations, turn-by-turn instruction HUD, progress tracking, and debounced dynamic rerouting.
+- [Real-Time Multimodal Ingestion & Streaming](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/REAL_TIME_INGESTION_AND_STREAMING.md): Bidirectional WebSocket streaming, REST fallback batch ingestion, bounded buffer backpressure, reconnection replay synchronization, live particle filter localization, and turn-by-turn navigation HUD.
 
 ---
 
@@ -201,4 +202,5 @@ Track our progress in [IMPLEMENTATION_STATUS.md](file:///Users/bineetkeshari/Des
 - **Task 26 (Indoor Map Generation & Spatial Representation):** COMPLETED
 - **Task 27 (Map-Constrained Multimodal Localization using a Particle Filter):** COMPLETED
 - **Task 28 (Indoor Navigation & Intelligent Route Planning):** COMPLETED
-- **Tasks 29 through 30:** Pending subsequent implementation prompts.
+- **Task 29 (Real-Time Multimodal Ingestion & Streaming Integration):** COMPLETED
+- **Task 30 (End-to-End System Integration, Security Audit & Verification):** Pending subsequent implementation prompt.
