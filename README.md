@@ -111,6 +111,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Wi-Fi + PDR Sensor Fusion (EKF)](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/WIFI_PDR_SENSOR_FUSION.md): Extended Kalman Filter combining continuous PDR kinematics with discrete Wi-Fi fingerprinting, Joseph form covariance updates, Chi-Square 2-DOF outlier gating, 4-tier uncertainty hierarchy, and calibrated 95% confidence ellipses.
 - [Computer Vision & Landmark Detection](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/COMPUTER_VISION_LANDMARK_DETECTION.md): Indoor landmark detection taxonomy (doors, stairs, elevators, signage), signboard OCR engine, persistent landmark registry with manual verification, and visual feature matching.
 - [Indoor Map Generation & Spatial Representation](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_MAP_GENERATION_AND_SPATIAL_REPRESENTATION.md): Metric 2D floorplans, topological navigation graphs, vertical transitions (stairs and elevators), geometric validation, atomic filesystem persistence, and RFC 7946 GeoJSON export.
+- [Map-Constrained Multimodal Localization (Particle Filter)](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MAP_CONSTRAINED_MULTIMODAL_LOCALIZATION.md): Sequential Monte Carlo particle filter enforcing building boundaries, solid wall collision checks, doorway passages, multi-floor vertical transitions, Wi-Fi observation likelihoods, and visual landmarks.
 
 ---
 
@@ -188,4 +189,13 @@ Track our progress in [IMPLEMENTATION_STATUS.md](file:///Users/bineetkeshari/Des
 - **Task 16 (Android User-Initiated Photo Capture & Privacy Sanitizer):** COMPLETED
 - **Task 17 (Unified Multimodal Capture Session & Dataset Builder):** COMPLETED
 - **Task 18 (Multimodal Dataset Ingestion & Quality Assurance Backend):** COMPLETED
-- **Tasks 19 through 30:** Pending subsequent implementation prompts.
+- **Task 19 (Interactive Multimodal Dataset Explorer & QA Dashboard):** COMPLETED
+- **Task 20 (Multimodal Data Preprocessing & Temporal Alignment Pipeline):** COMPLETED
+- **Task 21 (Pedestrian Dead Reckoning [PDR] Engine):** COMPLETED
+- **Task 22 (PDR Calibration, Ground-Truth Validation & Drift Analysis):** COMPLETED
+- **Task 23 (Site-Specific Wi-Fi Radio Map & Fingerprint Localization):** COMPLETED
+- **Task 24 (Wi-Fi + PDR Sensor Fusion using an Extended Kalman Filter):** COMPLETED
+- **Task 25 (Computer Vision-Based Indoor Landmark Detection):** COMPLETED
+- **Task 26 (Indoor Map Generation & Spatial Representation):** COMPLETED
+- **Task 27 (Map-Constrained Multimodal Localization using a Particle Filter):** COMPLETED
+- **Tasks 28 through 30:** Pending subsequent implementation prompts.

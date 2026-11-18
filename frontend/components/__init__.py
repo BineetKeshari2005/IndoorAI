@@ -10,6 +10,7 @@ from frontend.components.preprocessing_view import render_preprocessing_view
 from frontend.components.quality_view import render_quality_dashboard
 from frontend.components.sensor_fusion_view import render_sensor_fusion_view
 from frontend.components.computer_vision_view import render_computer_vision_view
+from frontend.components.map_localization_view import render_map_localization_view
 from frontend.components.mapping_view import render_mapping_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
@@ -34,4 +35,5 @@ __all__ = [
     "render_sensor_fusion_view",
     "render_computer_vision_view",
     "render_mapping_view",
+    "render_map_localization_view",
 ]

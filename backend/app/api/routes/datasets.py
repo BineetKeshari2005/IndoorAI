@@ -90,10 +90,19 @@ from backend.app.schemas.mapping import (
     MapValidationResponse,
     PublishVersionRequest,
 )
+from backend.app.schemas.map_localization import (
+    ParticleFilterEvaluateRequest,
+    ParticleFilterEvaluationResponse,
+    ParticleFilterRunRequest,
+    ParticleFilterStateSchema,
+    ParticleFilterStatusResponse,
+    ParticleFilterTrajectoryResponse,
+)
 from backend.app.services.computer_vision_service import ComputerVisionService
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
+from backend.app.services.map_localization_service import MapLocalizationService
 from backend.app.services.mapping_service import MappingService
 from backend.app.services.pdr_service import PDRService
 from backend.app.services.pdr_calibration_service import PDRCalibrationService
@@ -115,6 +124,7 @@ _wifi_survey_service: Optional[WifiSurveyService] = None
 _fusion_service: Optional[SensorFusionService] = None
 _vision_service: Optional[ComputerVisionService] = None
 _mapping_service: Optional[MappingService] = None
+_map_localization_service: Optional[MapLocalizationService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -179,6 +189,14 @@ def get_mapping_service() -> MappingService:
     if _mapping_service is None:
         _mapping_service = MappingService()
     return _mapping_service
+
+
+def get_map_localization_service() -> MapLocalizationService:
+    """Dependency provider for MapLocalizationService (Task 27)."""
+    global _map_localization_service
+    if _map_localization_service is None:
+        _map_localization_service = MapLocalizationService()
+    return _map_localization_service
 
 
 @router.post(
@@ -1708,6 +1726,125 @@ def export_indoor_map(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# -------------------------------------------------------------------------
+# Map-Constrained Multimodal Particle Filter Localization (Task 27)
+# -------------------------------------------------------------------------
+
+@router.post(
+    "/{dataset_id}/map-localization/run",
+    response_model=ParticleFilterTrajectoryResponse,
+    summary="Execute Map-Constrained Particle Filter Localization",
+    description="Fuses PDR step kinematics, map wall constraints, Wi-Fi likelihoods, and visual landmarks into a map-constrained trajectory."
+)
+def run_map_localization(
+    dataset_id: str,
+    req: ParticleFilterRunRequest,
+    service: MapLocalizationService = Depends(get_map_localization_service),
+) -> ParticleFilterTrajectoryResponse:
+    """Executes map-constrained particle filtering."""
+    try:
+        states, summary = service.run_map_localization(dataset_id=dataset_id, request=req)
+        return ParticleFilterTrajectoryResponse(
+            dataset_id=dataset_id,
+            total_points=len(states),
+            summary=summary.to_dict(),
+            trajectory=[ParticleFilterStateSchema(**s.to_dict()) for s in states],
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error running map localization for {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/map-localization/status",
+    response_model=ParticleFilterStatusResponse,
+    summary="Get status of map-constrained localization artifacts",
+    description="Checks whether particle filter trajectory and summary artifacts exist on disk."
+)
+def get_map_localization_status(
+    dataset_id: str,
+    service: MapLocalizationService = Depends(get_map_localization_service),
+) -> ParticleFilterStatusResponse:
+    """Checks map localization artifact availability."""
+    return service.get_status(dataset_id)
+
+
+@router.get(
+    "/{dataset_id}/map-localization/trajectory",
+    response_model=ParticleFilterTrajectoryResponse,
+    summary="Retrieve map-constrained particle filter trajectory",
+    description="Retrieves persisted trajectory states and operational summary."
+)
+def get_map_localization_trajectory(
+    dataset_id: str,
+    limit: int = Query(5000, ge=1, le=20000, description="Max points to return"),
+    service: MapLocalizationService = Depends(get_map_localization_service),
+) -> ParticleFilterTrajectoryResponse:
+    """Retrieves particle filter trajectory points."""
+    points = service.get_trajectory(dataset_id, limit=limit)
+    if not points:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No map-constrained trajectory found for dataset '{dataset_id}'. Run filter first.",
+        )
+    status_resp = service.get_status(dataset_id)
+    summary = status_resp.summary or {}
+    return ParticleFilterTrajectoryResponse(
+        dataset_id=dataset_id,
+        total_points=len(points),
+        summary=summary,
+        trajectory=[ParticleFilterStateSchema(**p) for p in points],
+    )
+
+
+@router.post(
+    "/{dataset_id}/map-localization/evaluate",
+    response_model=ParticleFilterEvaluationResponse,
+    summary="Evaluate Map-Constrained Localization against ground truth or baseline",
+    description="Computes comparative ATE, RMSE, wall crossing violations, and 95% error metrics."
+)
+def evaluate_map_localization(
+    dataset_id: str,
+    req: ParticleFilterEvaluateRequest,
+    service: MapLocalizationService = Depends(get_map_localization_service),
+) -> ParticleFilterEvaluationResponse:
+    """Evaluates particle filter trajectory performance."""
+    try:
+        report = service.evaluate(dataset_id=dataset_id, request=req)
+        return ParticleFilterEvaluationResponse(
+            dataset_id=dataset_id,
+            report=report.to_dict(),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error evaluating map localization for {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/map-localization/evaluation",
+    response_model=ParticleFilterEvaluationResponse,
+    summary="Get or generate default evaluation report",
+    description="Returns comparative evaluation report using synthetic or annotated ground truth."
+)
+def get_map_localization_evaluation(
+    dataset_id: str,
+    use_synthetic_fixture: bool = Query(True, description="Evaluate against synthetic multi-floor benchmark"),
+    service: MapLocalizationService = Depends(get_map_localization_service),
+) -> ParticleFilterEvaluationResponse:
+    """Returns evaluation report."""
+    req = ParticleFilterEvaluateRequest(use_synthetic_fixture=use_synthetic_fixture)
+    report = service.evaluate(dataset_id=dataset_id, request=req)
+    return ParticleFilterEvaluationResponse(
+        dataset_id=dataset_id,
+        report=report.to_dict(),
+    )
+
 
 
 

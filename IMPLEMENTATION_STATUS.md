@@ -3,9 +3,9 @@
 This document tracks progress across all 30 implementation tasks defined in the [Development Roadmap](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DEVELOPMENT_ROADMAP.md).
 
 **Summary Progress:**
-- **Completed:** 26 / 30 tasks (86.7%)
+- **Completed:** 27 / 30 tasks (90.0%)
 - **In Progress:** 0 / 30 tasks
-- **Not Started:** 4 / 30 tasks
+- **Not Started:** 3 / 30 tasks
 
 ---
 
@@ -39,7 +39,7 @@ This document tracks progress across all 30 implementation tasks defined in the 
 | **Task 24** | **Wi-Fi + PDR Sensor Fusion using an Extended Kalman Filter** | **Phase 7** | **COMPLETED** | **2026-11-18** |
 | **Task 25** | **Computer Vision-Based Indoor Landmark Detection** | **Phase 7** | **COMPLETED** | **2026-11-18** |
 | **Task 26** | **Indoor Map Generation & Spatial Representation** | **Phase 7** | **COMPLETED** | **2026-11-18** |
-| Task 27 | FastAPI Core Backend, Database Models & Device Auth | Phase 8 | NOT STARTED | Planned |
+| **Task 27** | **Map-Constrained Multimodal Localization using a Particle Filter** | **Phase 7** | **COMPLETED** | **2026-11-18** |
 | Task 28 | Real-Time Ingestion & Inference Endpoints | Phase 8 | NOT STARTED | Planned |
 | Task 29 | Next.js Frontend Interactive Dashboard | Phase 8 | NOT STARTED | Planned |
 | Task 30 | End-to-End System Integration, Security Audit & Verification | Phase 8 | NOT STARTED | Planned |
@@ -672,6 +672,38 @@ This document tracks progress across all 30 implementation tasks defined in the 
     - Full repository test run passing **262 tests** (239 previous + 23 new) with 0 failures, 0 errors, and zero regressions on baseline models.
   - Architectural Documentation:
     - [docs/INDOOR_MAP_GENERATION_AND_SPATIAL_REPRESENTATION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_MAP_GENERATION_AND_SPATIAL_REPRESENTATION.md) (Comprehensive specification covering 2D spatial geometry, indoor entity models, topological navigation graphs, validation rules, atomic storage and versioning, RFC 7946 GeoJSON export, REST APIs, and UI dashboard).
+
+### Task 27: Map-Constrained Multimodal Localization using a Particle Filter
+- **Status:** COMPLETED
+- **Completed On:** 2026-11-18
+- **Deliverables Created & Enhanced:**
+  - Dedicated Map Localization Package (`src/map_localization/`):
+    - [src/map_localization/models.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/models.py) (Domain models: `FilterStatus`, `ObservationType`, `ResampleAlgorithm`, `ParticleFilterConfig`, `ParticleFilterState`, `ParticleFilterSummary`).
+    - [src/map_localization/particle.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/particle.py) (Particle state vector $s_i = (x_i, y_i, \theta_i, f_i, w_i)$, coordinate normalization, copy, distance, and heading wrap to $[-\pi, \pi]$).
+    - [src/map_localization/initialization.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/initialization.py) (`ParticleInitializer` supporting known location, Wi-Fi fix with covariance dispersion, EKF baseline state, and bounding box initialization with floor boundary containment and solid wall avoidance).
+    - [src/map_localization/motion_model.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/motion_model.py) (`PdrMotionModel` stochastic step propagation with step length and heading noise, stationary angular diffusion).
+    - [src/map_localization/map_constraints.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/map_constraints.py) (`MapConstraintEvaluator` enforcing solid room wall collision rejection, doorway passage tolerance $\le 1.2\text{m}$, outer floor boundary containment, multi-floor vertical transitions $\le 3.5\text{m}$ near stairs/elevators, and preservation of unsurveyed areas `allow_unknown_areas=True`).
+    - [src/map_localization/measurement_model.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/measurement_model.py) (`WifiMeasurementModel` 2D Gaussian likelihood updates with $2\times 2$ covariance matrix, floor mismatch penalty, and soft log-likelihood lower bounds).
+    - [src/map_localization/landmark_observation.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/landmark_observation.py) (`LandmarkMeasurementModel` visual landmark proximity updates within $r_{max} \approx 6.0\text{m}$ viewing zone without claiming exact camera position).
+    - [src/map_localization/resampling.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/resampling.py) (`Resampler` log-sum-exp weight normalization, effective sample size $N_{eff} = 1/\sum w_i^2$, $O(N)$ low-variance systematic resampling, diversity monitoring, and roughening jitter).
+    - [src/map_localization/particle_filter.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/particle_filter.py) (`MapConstrainedParticleFilter` full state lifecycle orchestration, circular mean heading, floor consensus mode, particle spread $\sigma_{xy}$, and 95% circular uncertainty).
+    - [src/map_localization/evaluation.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/evaluation.py) (`MapLocalizationEvaluator`, `TrajectoryComparisonMetrics`, `MapLocalizationEvaluationReport`, and `generate_controlled_benchmark_trajectory` multi-floor ground truth benchmark fixture).
+    - [src/map_localization/pipeline.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/pipeline.py) (`MapLocalizationPipeline` chronological event loop merging PDR, Wi-Fi, landmarks, and concurrent EKF baseline).
+    - [src/map_localization/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/map_localization/__init__.py) (Clean public package exports).
+  - Backend API Schemas & Service:
+    - [backend/app/schemas/map_localization.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/schemas/map_localization.py) (Pydantic request/response models: `ParticleFilterRunRequest`, `ParticleFilterStateSchema`, `ParticleFilterTrajectoryResponse`, `ParticleFilterStatusResponse`, `ParticleFilterEvaluateRequest`, `ParticleFilterEvaluationResponse`).
+    - [backend/app/services/map_localization_service.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/services/map_localization_service.py) (`MapLocalizationService` integrating PDR steps, Wi-Fi radio maps, visual landmarks, and building maps, with parquet and JSON trajectory persistence).
+    - [backend/app/api/routes/datasets.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/api/routes/datasets.py) (Added 5 REST endpoints for map localization run, status, trajectory retrieval, evaluation, and report retrieval).
+  - Frontend UI & Visualizations:
+    - [frontend/api_client.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/api_client.py) (Added 5 client methods for particle filter operations).
+    - [frontend/components/map_localization_view.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/map_localization_view.py) (Interactive Section 17 dashboard with 4 tabs: 2D Trajectory & Floorplan Canvas, Filter Controls & Execution, Particle Spread & Diagnostics, and Comparative Benchmark Evaluation).
+    - [frontend/components/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/__init__.py) and [frontend/app.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/app.py) (Registered `17. Map-Constrained Localization` in sidebar navigation).
+  - Testing & Verification:
+    - [tests/test_map_localization.py](file:///Users/bineetkeshari/Desktop/IndoorAI/tests/test_map_localization.py) (21 comprehensive unit and integration tests covering particle primitives, initialization, motion propagation, wall collision rejection, doorway passage, Wi-Fi likelihoods, visual landmarks, systematic resampling, multi-floor transitions, comparative benchmark evaluation, and all FastAPI REST endpoints).
+    - Full repository test run passing **283 tests** (262 previous + 21 new) with 0 failures, 0 errors, and zero regressions on baseline models.
+  - Architectural Documentation:
+    - [docs/MAP_CONSTRAINED_MULTIMODAL_LOCALIZATION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MAP_CONSTRAINED_MULTIMODAL_LOCALIZATION.md) (Comprehensive technical specification covering particle filter mathematical state space, building constraints and anti-fabrication principles, observation models, resampling, circular statistics, comparative benchmarking, REST API, and UI dashboard).
+
 
 
 

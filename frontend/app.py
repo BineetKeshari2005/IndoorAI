@@ -41,6 +41,7 @@ from frontend.components.preprocessing_view import render_preprocessing_view
 from frontend.components.quality_view import render_quality_dashboard
 from frontend.components.sensor_fusion_view import render_sensor_fusion_view
 from frontend.components.computer_vision_view import render_computer_vision_view
+from frontend.components.map_localization_view import render_map_localization_view
 from frontend.components.mapping_view import render_mapping_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
@@ -801,6 +802,7 @@ def render_multimodal_workspace() -> None:
             "14. Wi-Fi + PDR Sensor Fusion",
             "15. Computer Vision & Landmarks",
             "16. Indoor Mapping & Spatial Graphs",
+            "17. Map-Constrained Localization",
         ]
         selected_sec = st.radio("Navigation", sections, index=0)
 
@@ -814,12 +816,13 @@ def render_multimodal_workspace() -> None:
         st.info("● EKF Sensor Fusion: Task 24 Ready")
         st.info("● Computer Vision & Landmarks: Task 25 Ready")
         st.info("● Indoor Spatial Maps: Task 26 Ready")
-        st.caption("IndoorAI Multimodal Explorer v1.9.0")
+        st.info("● Map-Constrained PF: Task 27 Ready")
+        st.caption("IndoorAI Multimodal Explorer v1.10.0")
 
     # Main Header
     st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–24)</div>',
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–27)</div>',
         unsafe_allow_html=True
     )
 
@@ -857,6 +860,8 @@ def render_multimodal_workspace() -> None:
         render_computer_vision_view(client)
     elif selected_sec == "16. Indoor Mapping & Spatial Graphs":
         render_mapping_view(client)
+    elif selected_sec == "17. Map-Constrained Localization":
+        render_map_localization_view(client, selected_dataset_id)
 
 
 def render_benchmark_workspace() -> None:

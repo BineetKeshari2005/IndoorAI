@@ -380,7 +380,7 @@ class FloorMap:
     floor_id: int
     building_id: str
     floor_number: int
-    label: str
+    label: str = ""
     elevation_m: float = 0.0
     boundary: Optional[Polygon2D] = None
     rooms: Dict[str, Room] = field(default_factory=dict)

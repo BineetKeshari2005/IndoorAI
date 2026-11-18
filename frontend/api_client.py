@@ -925,6 +925,68 @@ class DatasetApiClient:
             return res.json()
         raise DatasetApiClientException(f"Failed to export map: HTTP {res.status_code}", details=res.text)
 
+    # -------------------------------------------------------------------------
+    # Map-Constrained Multimodal Particle Filter Localization (Task 27)
+    # -------------------------------------------------------------------------
+
+    def run_map_localization(
+        self,
+        dataset_id: str,
+        run_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Executes map-constrained particle filtering on dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/map-localization/run"
+        res = self._request("POST", url, json=run_params, timeout=60.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to run map localization: HTTP {res.status_code}", details=res.text)
+
+    def get_map_localization_status(self, dataset_id: str) -> Dict[str, Any]:
+        """Checks whether map localization trajectory artifacts are computed."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/map-localization/status"
+        res = self._request("GET", url, timeout=10.0)
+        if res.status_code == 200:
+            return res.json()
+        return {"dataset_id": dataset_id, "is_available": False}
+
+    def get_map_localization_trajectory(
+        self,
+        dataset_id: str,
+        limit: int = 5000,
+    ) -> Dict[str, Any]:
+        """Retrieves map-constrained particle filter trajectory points and operational summary."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/map-localization/trajectory?limit={limit}"
+        res = self._request("GET", url, timeout=30.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to get map trajectory: HTTP {res.status_code}", details=res.text)
+
+    def evaluate_map_localization(
+        self,
+        dataset_id: str,
+        eval_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Executes comparative evaluation of map-constrained PF against ground truth or baseline."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/map-localization/evaluate"
+        res = self._request("POST", url, json=eval_params, timeout=60.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to evaluate map localization: HTTP {res.status_code}", details=res.text)
+
+    def get_map_localization_evaluation(
+        self,
+        dataset_id: str,
+        use_synthetic_fixture: bool = True,
+    ) -> Dict[str, Any]:
+        """Fetches or generates default evaluation report."""
+        synth_flag = "true" if use_synthetic_fixture else "false"
+        url = f"{self.base_url}/api/datasets/{dataset_id}/map-localization/evaluation?use_synthetic_fixture={synth_flag}"
+        res = self._request("GET", url, timeout=40.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to fetch evaluation report: HTTP {res.status_code}", details=res.text)
+
+
 
 
 
