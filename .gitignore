@@ -87,6 +87,8 @@ data/external/*
 !data/external/.gitkeep
 data/survey_datasets/*
 !data/survey_datasets/.gitkeep
+data/calibration/*
+!data/calibration/.gitkeep
 
 # Logs
 logs/

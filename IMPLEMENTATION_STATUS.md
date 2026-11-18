@@ -3,9 +3,9 @@
 This document tracks progress across all 30 implementation tasks defined in the [Development Roadmap](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/DEVELOPMENT_ROADMAP.md).
 
 **Summary Progress:**
-- **Completed:** 21 / 30 tasks (70.0%)
+- **Completed:** 22 / 30 tasks (73.3%)
 - **In Progress:** 0 / 30 tasks
-- **Not Started:** 9 / 30 tasks
+- **Not Started:** 8 / 30 tasks
 
 ---
 
@@ -34,7 +34,7 @@ This document tracks progress across all 30 implementation tasks defined in the 
 | **Task 19** | **Multimodal Dataset Explorer & Visualization Dashboard** | **Phase 4** | **COMPLETED** | **2026-11-17** |
 | **Task 20** | **Multimodal Data Preprocessing & Temporal Alignment Pipeline** | **Phase 5** | **COMPLETED** | **2026-11-17** |
 | **Task 21** | **Pedestrian Dead Reckoning (PDR) Engine** | **Phase 6** | **COMPLETED** | **2026-11-17** |
-| Task 22 | Extended Kalman Filter (EKF) for Wi-Fi + PDR | Phase 6 | NOT STARTED | Planned |
+| **Task 22** | **PDR Calibration, Ground-Truth Validation & Drift Analysis** | **Phase 6** | **COMPLETED** | **2026-11-18** |
 | Task 23 | Map-Constrained Particle Filter | Phase 6 | NOT STARTED | Planned |
 | Task 24 | Multimodal Cross-Attention Fusion Network | Phase 7 | NOT STARTED | Planned |
 | Task 25 | Multimodal Joint Training & Uncertainty Calibration | Phase 7 | NOT STARTED | Planned |
@@ -527,6 +527,38 @@ This document tracks progress across all 30 implementation tasks defined in the 
     - Full repository test run passing 168 tests (159 previous + 9 PDR) with 0 failures, 0 errors, and zero regressions on baseline models.
   - Architectural Documentation:
     - [docs/PDR_ENGINE_ARCHITECTURE.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_ENGINE_ARCHITECTURE.md) (Complete specification covering coordinate frames, gravity compensation methods, Butterworth filtering, heading sources, magnetic disturbance handling, Weinberg model, spatial covariance Jacobian math, Parquet schemas, and system boundaries).
+
+### Task 22: PDR Calibration, Ground-Truth Validation & Drift Analysis
+- **Status:** COMPLETED
+- **Completed On:** 2026-11-18
+- **Deliverables Created & Enhanced:**
+  - Dedicated Calibration & Evaluation Package (`src/pdr/calibration/`):
+    - [src/pdr/calibration/models.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/models.py) (`WalkingTrial`, `GroundTruthMeasurement`, `ReferenceWaypoint`, `TrialType`, `PhonePlacement`, `WalkingCondition`, `CalibrationProfile`, `CalibrationStatus`, `ConfidenceEllipse`, `StepDetectionMetrics`, `HeadingMetrics`, `TrajectoryDriftMetrics`, `PDREvaluationReport`).
+    - [src/pdr/calibration/storage.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/storage.py) (`CalibrationStorage` managing trials, results, and registry in `data/calibration/pdr/` with default uncalibrated profile `PROF-DEFAULT`).
+    - [src/pdr/calibration/step_length_calibrator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/step_length_calibrator.py) (`WeinbergCalibrator` implementing bounded scalar optimization over $K \in [0.20, 0.80]$ with physiological clamping, weighted relative error, and separate train/validation metrics).
+    - [src/pdr/calibration/step_evaluator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/step_evaluator.py) (`StepDetectionEvaluator` computing TP, FP, FN, precision, recall, F1-score, and count error against manual counts or reference timestamps).
+    - [src/pdr/calibration/heading_evaluator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/heading_evaluator.py) (`HeadingEvaluator` implementing circular statistics, wraparound handling in $[-180^\circ, 180^\circ]$, mean/median/p95 errors, drift rate deg/min, and magnetic disturbance tracking).
+    - [src/pdr/calibration/trajectory_evaluator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/trajectory_evaluator.py) (`TrajectoryDriftEvaluator` computing distance error, endpoint Euclidean error, relative endpoint error, net displacement error, drift per meter, drift per minute, and cross-track error).
+    - [src/pdr/calibration/uncertainty_evaluator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/uncertainty_evaluator.py) (`UncertaintyAuditor` computing exact 2D Gaussian 95% confidence ellipse parameters via $\chi^2_{2, 0.95} = 5.99146$, conservative circular bound, and empirical ground-truth containment coverage via Mahalanobis distance).
+    - [src/pdr/calibration/evaluator.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/evaluator.py) (`PDREvaluator` orchestrating step detection, heading, trajectory drift, and uncertainty evaluation into structured `PDREvaluationReport`).
+    - [src/pdr/calibration/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/calibration/__init__.py) (Package public exports).
+  - Enhanced Core PDR Kinematics (`src/pdr/uncertainty.py`, `src/pdr/trajectory.py`):
+    - [src/pdr/uncertainty.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/uncertainty.py) (Added 2D Chi-square 95% confidence ellipse metrics: `semi_major_axis_m`, `semi_minor_axis_m`, `ellipse_angle_deg`, `conservative_95_radius_m`; added augmented 3-state $[x, y, \theta]^T$ covariance update `update_with_heading_drift()`).
+    - [src/pdr/trajectory.py](file:///Users/bineetkeshari/Desktop/IndoorAI/src/pdr/trajectory.py) (Propagated confidence ellipse parameters into sequential trajectory points).
+  - Backend API Schemas & Service Endpoints:
+    - [backend/app/schemas/pdr_calibration.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/schemas/pdr_calibration.py) (Pydantic request/response schemas for trial registration, Weinberg calibration, profile retrieval, and evaluation).
+    - [backend/app/services/pdr_calibration_service.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/services/pdr_calibration_service.py) (`PDRCalibrationService` managing trial storage, Weinberg calibration, profile retrieval, and evaluation reports).
+    - [backend/app/api/routes/datasets.py](file:///Users/bineetkeshari/Desktop/IndoorAI/backend/app/api/routes/datasets.py) (Added 7 REST endpoints: `POST /pdr/trials`, `GET /pdr/trials`, `GET /pdr/trials/{id}`, `POST /pdr/calibrate`, `GET /pdr/calibration`, `POST /pdr/evaluate`, `GET /pdr/evaluation`).
+  - Frontend UI & Visualizations:
+    - [frontend/api_client.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/api_client.py) (Added client methods for trials, calibration, profiles, and evaluation).
+    - [frontend/components/pdr_calibration_view.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/pdr_calibration_view.py) (Interactive Section 12 dashboard view: Weinberg Stride Calibration, Walking Trials Registry, Trajectory Drift & 95% Ellipses with Plotly, and Step & Heading Validation).
+    - [frontend/components/__init__.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/components/__init__.py) and [frontend/app.py](file:///Users/bineetkeshari/Desktop/IndoorAI/frontend/app.py) (Registered `12. PDR Calibration & Validation` in sidebar navigation).
+  - Testing & Verification:
+    - [tests/test_pdr_calibration.py](file:///Users/bineetkeshari/Desktop/IndoorAI/tests/test_pdr_calibration.py) (15 comprehensive unit and API integration tests covering trial serialization, Weinberg optimization, insufficient data fallback, train/val separation, step precision/recall/F1, circular wraparound, heading drift rate, endpoint and cross-track error, 2D confidence ellipse calculation, 3-state covariance update, profile resolution hierarchy, and all FastAPI calibration endpoints).
+    - Full repository test run passing **183 tests** (168 previous + 15 new) with 0 failures, 0 errors, and zero regressions.
+  - Architectural Documentation:
+    - [docs/PDR_CALIBRATION_AND_VALIDATION.md](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_CALIBRATION_AND_VALIDATION.md) (Complete specification covering trial schemas, measurement methodology, Weinberg optimization math, circular statistics, drift metrics, 2D Chi-square confidence ellipse derivation, and system limitations).
+
 
 
 

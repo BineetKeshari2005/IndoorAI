@@ -33,10 +33,20 @@ from backend.app.schemas.preprocessing import (
     PreprocessingStatusResponse,
     ProcessedFilesResponse,
 )
+from backend.app.schemas.pdr_calibration import (
+    CalibrateRequest,
+    CalibrationProfileResponse,
+    CalibrationProfilesListResponse,
+    EvaluateRequest,
+    TrialListResponse,
+    TrialRegisterRequest,
+    TrialSummaryResponse,
+)
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
 from backend.app.services.pdr_service import PDRService
+from backend.app.services.pdr_calibration_service import PDRCalibrationService
 from backend.app.services.preprocessing_service import PreprocessingService
 from src.core.logging import setup_logger
 
@@ -48,6 +58,7 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 _ingestion_service: Optional[DatasetIngestionService] = None
 _preprocessing_service: Optional[PreprocessingService] = None
 _pdr_service: Optional[PDRService] = None
+_pdr_calibration_service: Optional[PDRCalibrationService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -72,6 +83,14 @@ def get_pdr_service() -> PDRService:
     if _pdr_service is None:
         _pdr_service = PDRService()
     return _pdr_service
+
+
+def get_pdr_calibration_service() -> PDRCalibrationService:
+    """Dependency provider for PDRCalibrationService."""
+    global _pdr_calibration_service
+    if _pdr_calibration_service is None:
+        _pdr_calibration_service = PDRCalibrationService()
+    return _pdr_calibration_service
 
 
 @router.post(
@@ -570,6 +589,219 @@ def get_pdr_report(
             detail=f"No PDR report found for dataset '{dataset_id}'."
         )
     return report
+
+
+# -----------------------------------------------------------------------------
+# PDR Calibration, Ground-Truth Validation & Drift Analysis Endpoints (Task 22)
+# -----------------------------------------------------------------------------
+
+@router.post(
+    "/{dataset_id}/pdr/trials",
+    response_model=TrialSummaryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a measured ground-truth walking trial",
+    description="Registers manual survey measurements (distance, heading, steps) linked to a dataset session."
+)
+def register_walking_trial(
+    dataset_id: str,
+    trial_req: TrialRegisterRequest,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+) -> TrialSummaryResponse:
+    """Registers a new measured ground-truth walking trial."""
+    try:
+        trial = cal_service.register_trial(dataset_id, trial_req)
+        return TrialSummaryResponse(
+            trial_id=trial.trial_id,
+            dataset_id=trial.dataset_id,
+            session_id=trial.session_id,
+            participant_id=trial.participant_id,
+            device_model=trial.device_model,
+            phone_placement=trial.phone_placement.value,
+            walking_condition=trial.walking_condition.value,
+            trial_type=trial.trial_type.value,
+            start_timestamp_ms=trial.start_timestamp_ms,
+            end_timestamp_ms=trial.end_timestamp_ms,
+            measured_distance_m=trial.ground_truth.measured_distance_m,
+            measurement_method=trial.ground_truth.measurement_method,
+            ground_truth_step_count=trial.ground_truth.ground_truth_step_count,
+            is_synthetic=trial.is_synthetic,
+            created_at_iso=trial.created_at_iso
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error("Failed to register walking trial: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to register trial: {e}")
+
+
+@router.get(
+    "/{dataset_id}/pdr/trials",
+    response_model=TrialListResponse,
+    summary="List registered walking trials",
+    description="Retrieves summary metadata for all ground-truth trials associated with a dataset."
+)
+def list_walking_trials(
+    dataset_id: str,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+) -> TrialListResponse:
+    """Lists registered trials for a dataset."""
+    trials = cal_service.list_trials(dataset_id=dataset_id)
+    summaries = [
+        TrialSummaryResponse(
+            trial_id=t.trial_id,
+            dataset_id=t.dataset_id,
+            session_id=t.session_id,
+            participant_id=t.participant_id,
+            device_model=t.device_model,
+            phone_placement=t.phone_placement.value,
+            walking_condition=t.walking_condition.value,
+            trial_type=t.trial_type.value,
+            start_timestamp_ms=t.start_timestamp_ms,
+            end_timestamp_ms=t.end_timestamp_ms,
+            measured_distance_m=t.ground_truth.measured_distance_m,
+            measurement_method=t.ground_truth.measurement_method,
+            ground_truth_step_count=t.ground_truth.ground_truth_step_count,
+            is_synthetic=t.is_synthetic,
+            created_at_iso=t.created_at_iso
+        )
+        for t in trials
+    ]
+    return TrialListResponse(
+        dataset_id=dataset_id,
+        total_trials=len(summaries),
+        trials=summaries
+    )
+
+
+@router.get(
+    "/{dataset_id}/pdr/trials/{trial_id}",
+    summary="Retrieve full ground-truth trial details",
+    description="Returns complete trial metadata, ground-truth measurements, and waypoints."
+)
+def get_walking_trial(
+    dataset_id: str,
+    trial_id: str,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+):
+    """Retrieves full trial record."""
+    trial = cal_service.get_trial(trial_id)
+    if not trial or trial.dataset_id != dataset_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Trial '{trial_id}' not found for dataset '{dataset_id}'."
+        )
+    return trial.to_dict()
+
+
+@router.post(
+    "/{dataset_id}/pdr/calibrate",
+    response_model=CalibrationProfileResponse,
+    summary="Calibrate Weinberg step-length constant",
+    description="Optimizes Weinberg parameter K from training trials and validates on held-out trials."
+)
+def calibrate_weinberg_stride(
+    dataset_id: str,
+    cal_req: CalibrateRequest,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+) -> CalibrationProfileResponse:
+    """Executes Weinberg parameter estimation."""
+    try:
+        profile = cal_service.calibrate(dataset_id, cal_req)
+        return CalibrationProfileResponse(
+            profile_id=profile.profile_id,
+            profile_name=profile.profile_name,
+            profile_type=profile.profile_type.value,
+            calibration_method=profile.calibration_method,
+            weinberg_k=profile.weinberg_k,
+            step_length_bounds=list(profile.step_length_bounds),
+            device_model=profile.device_model,
+            phone_placement=profile.phone_placement.value if profile.phone_placement else None,
+            participant_id=profile.participant_id,
+            source_trial_ids=profile.source_trial_ids,
+            calibration_date_iso=profile.calibration_date_iso,
+            calibration_status=profile.calibration_status.value,
+            training_metrics=profile.training_metrics,
+            validation_metrics=profile.validation_metrics,
+            notes=profile.notes
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error("Calibration failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Calibration failed: {e}")
+
+
+@router.get(
+    "/{dataset_id}/pdr/calibration",
+    response_model=CalibrationProfilesListResponse,
+    summary="List calibration profiles",
+    description="Retrieves all registered PDR calibration profiles."
+)
+def list_calibration_profiles(
+    dataset_id: str,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+) -> CalibrationProfilesListResponse:
+    """Retrieves all registered calibration profiles."""
+    profiles = cal_service.list_profiles()
+    resp_list = [
+        CalibrationProfileResponse(
+            profile_id=p.profile_id,
+            profile_name=p.profile_name,
+            profile_type=p.profile_type.value,
+            calibration_method=p.calibration_method,
+            weinberg_k=p.weinberg_k,
+            step_length_bounds=list(p.step_length_bounds),
+            device_model=p.device_model,
+            phone_placement=p.phone_placement.value if p.phone_placement else None,
+            participant_id=p.participant_id,
+            source_trial_ids=p.source_trial_ids,
+            calibration_date_iso=p.calibration_date_iso,
+            calibration_status=p.calibration_status.value,
+            training_metrics=p.training_metrics,
+            validation_metrics=p.validation_metrics,
+            notes=p.notes
+        )
+        for p in profiles
+    ]
+    return CalibrationProfilesListResponse(
+        total_profiles=len(resp_list),
+        profiles=resp_list
+    )
+
+
+@router.post(
+    "/{dataset_id}/pdr/evaluate",
+    summary="Evaluate PDR against ground-truth walking trials",
+    description="Computes step detection, heading, trajectory drift, and 95% spatial confidence ellipse metrics."
+)
+def evaluate_pdr_trials(
+    dataset_id: str,
+    eval_req: EvaluateRequest,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+):
+    """Evaluates PDR against specified trials."""
+    try:
+        reports = cal_service.evaluate(dataset_id, eval_req)
+        return [r.to_dict() for r in reports]
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error("Evaluation failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Evaluation failed: {e}")
+
+
+@router.get(
+    "/{dataset_id}/pdr/evaluation",
+    summary="Get recent PDR evaluation reports",
+    description="Retrieves historical evaluation reports for the dataset."
+)
+def get_evaluation_reports(
+    dataset_id: str,
+    cal_service: PDRCalibrationService = Depends(get_pdr_calibration_service)
+):
+    """Retrieves stored evaluation reports."""
+    reports = cal_service.get_evaluation_reports(dataset_id=dataset_id)
+    return reports
 
 
 

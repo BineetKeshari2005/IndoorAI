@@ -77,6 +77,7 @@ class TrajectoryReconstructor:
         traj_points: List[Dict[str, Any]] = []
 
         # Origin point at step 0
+        init_ellipse_radius = round(math.sqrt(5.99146) * self.config.initial_pos_uncertainty_m, 3)
         traj_points.append({
             "point_id": "PDR-00000",
             "session_id": session_id,
@@ -89,6 +90,10 @@ class TrajectoryReconstructor:
             "step_length_m": 0.0,
             "cum_distance_m": 0.0,
             "pos_uncertainty_radius_m": round(self.config.initial_pos_uncertainty_m, 3),
+            "semi_major_axis_m": init_ellipse_radius,
+            "semi_minor_axis_m": init_ellipse_radius,
+            "ellipse_angle_deg": 0.0,
+            "conservative_95_radius_m": init_ellipse_radius,
             "heading_source": "INITIAL_ORIGIN",
             "confidence": 1.0,
             "is_reliable": True,
@@ -145,6 +150,10 @@ class TrajectoryReconstructor:
                 "step_length_m": round(length, 3),
                 "cum_distance_m": round(cum_dist, 3),
                 "pos_uncertainty_radius_m": round(cov_result.uncertainty_radius_m, 3),
+                "semi_major_axis_m": cov_result.semi_major_axis_m,
+                "semi_minor_axis_m": cov_result.semi_minor_axis_m,
+                "ellipse_angle_deg": cov_result.ellipse_angle_deg,
+                "conservative_95_radius_m": cov_result.conservative_95_radius_m,
                 "heading_source": step_heading.heading_source,
                 "confidence": round(point_conf, 2),
                 "is_reliable": step_heading.is_reliable and (step_conf >= 0.7),

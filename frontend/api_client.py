@@ -336,4 +336,101 @@ class DatasetApiClient:
             logger.warning("Error fetching PDR steps for %s: %s", dataset_id, e)
             return []
 
+    def register_pdr_trial(self, dataset_id: str, trial_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Registers a measured ground-truth walking trial linked to a dataset session."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/trials"
+        try:
+            res = self._request("POST", url, json=trial_data, timeout=30.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Failed to register trial: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error registering trial for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error registering trial: {e}")
+
+    def get_pdr_trials(self, dataset_id: str) -> List[Dict[str, Any]]:
+        """Fetches registered walking trials for a dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/trials"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json().get("trials", [])
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching trials for %s: %s", dataset_id, e)
+            return []
+
+    def get_pdr_trial_detail(self, dataset_id: str, trial_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves full trial record and ground-truth measurements."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/trials/{trial_id}"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            return None
+        except httpx.RequestError as e:
+            logger.warning("Error fetching trial %s detail: %s", trial_id, e)
+            return None
+
+    def calibrate_pdr(self, dataset_id: str, cal_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Triggers Weinberg step-length parameter estimation over selected trials."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/calibrate"
+        try:
+            res = self._request("POST", url, json=cal_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Calibration failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error calibrating PDR for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error calibrating PDR: {e}")
+
+    def get_pdr_calibration_profiles(self, dataset_id: str) -> List[Dict[str, Any]]:
+        """Retrieves all registered PDR calibration profiles."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/calibration"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json().get("profiles", [])
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching calibration profiles: %s", e)
+            return []
+
+    def evaluate_pdr(self, dataset_id: str, eval_params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Evaluates PDR trajectories against specified ground-truth walking trials."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/evaluate"
+        try:
+            res = self._request("POST", url, json=eval_params, timeout=60.0)
+            if res.status_code in (200, 201):
+                return res.json()
+            raise DatasetApiClientException(
+                f"Evaluation failed: HTTP {res.status_code}",
+                status_code=res.status_code,
+                details=res.text
+            )
+        except httpx.RequestError as e:
+            logger.error("Connection error evaluating PDR for %s: %s", dataset_id, e)
+            raise DatasetApiClientException(f"Connection error evaluating PDR: {e}")
+
+    def get_pdr_evaluation_reports(self, dataset_id: str) -> List[Dict[str, Any]]:
+        """Retrieves recent evaluation reports for a dataset."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/pdr/evaluation"
+        try:
+            res = self._request("GET", url)
+            if res.status_code == 200:
+                return res.json()
+            return []
+        except httpx.RequestError as e:
+            logger.warning("Error fetching evaluation reports for %s: %s", dataset_id, e)
+            return []
+
+
 

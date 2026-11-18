@@ -106,6 +106,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Multimodal Dataset Explorer](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_DATASET_EXPLORER.md): Multimodal survey explorer and visualization dashboard, API client, privacy-sanitized photo viewer, and QA inspection.
 - [Multimodal Preprocessing Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MULTIMODAL_PREPROCESSING_ARCHITECTURE.md): Preprocessing pipeline, Wi-Fi cleaning, tri-axial kinematics, temporal alignment windowing, session segmentation, and audit manifests.
 - [PDR Engine Architecture](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_ENGINE_ARCHITECTURE.md): Pedestrian Dead Reckoning (PDR) engine, coordinate frames, gravity separation, Butterworth filtering, Weinberg step length model, heading estimation, 2D relative dead reckoning, and spatial covariance propagation.
+- [PDR Calibration and Validation](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/PDR_CALIBRATION_AND_VALIDATION.md): Empirical Weinberg stride calibration, ground-truth walking trials, step/heading precision, trajectory drift analysis, and 95% spatial confidence ellipses.
 
 ---
 
