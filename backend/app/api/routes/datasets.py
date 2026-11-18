@@ -98,12 +98,27 @@ from backend.app.schemas.map_localization import (
     ParticleFilterStatusResponse,
     ParticleFilterTrajectoryResponse,
 )
+from backend.app.schemas.navigation import (
+    CreateSessionRequest,
+    DestinationListResponse,
+    DestinationResponse,
+    InstructionResponse,
+    NavigationEvaluateRequest,
+    NavigationEvaluateResponse,
+    NavigationProgressRequest,
+    NavigationProgressResponse,
+    NavigationSessionResponse,
+    PlannedRouteResponse,
+    RoutePlanRequest,
+    WaypointResponse,
+)
 from backend.app.services.computer_vision_service import ComputerVisionService
 from backend.app.services.dataset_extraction import SecurityValidationError
 from backend.app.services.dataset_ingestion import DatasetIngestionService
 from backend.app.services.dataset_registry import DatasetRegistry
 from backend.app.services.map_localization_service import MapLocalizationService
 from backend.app.services.mapping_service import MappingService
+from backend.app.services.navigation_service import NavigationService
 from backend.app.services.pdr_service import PDRService
 from backend.app.services.pdr_calibration_service import PDRCalibrationService
 from backend.app.services.preprocessing_service import PreprocessingService
@@ -125,6 +140,7 @@ _fusion_service: Optional[SensorFusionService] = None
 _vision_service: Optional[ComputerVisionService] = None
 _mapping_service: Optional[MappingService] = None
 _map_localization_service: Optional[MapLocalizationService] = None
+_navigation_service: Optional[NavigationService] = None
 
 
 def get_ingestion_service() -> DatasetIngestionService:
@@ -197,6 +213,14 @@ def get_map_localization_service() -> MapLocalizationService:
     if _map_localization_service is None:
         _map_localization_service = MapLocalizationService()
     return _map_localization_service
+
+
+def get_navigation_service() -> NavigationService:
+    """Dependency provider for NavigationService (Task 28)."""
+    global _navigation_service
+    if _navigation_service is None:
+        _navigation_service = NavigationService()
+    return _navigation_service
 
 
 @router.post(
@@ -1844,6 +1868,239 @@ def get_map_localization_evaluation(
         dataset_id=dataset_id,
         report=report.to_dict(),
     )
+
+
+# =========================================================================
+# Task 28 — Indoor Navigation & Intelligent Route Planning Endpoints
+# =========================================================================
+
+@router.get(
+    "/{dataset_id}/navigation/destinations",
+    response_model=DestinationListResponse,
+    summary="List or search verified indoor destinations",
+    description="Returns verified rooms, doorways, vertical transitions, and landmarks."
+)
+def list_destinations(
+    dataset_id: str,
+    building_id: str = Query("SYNTH_BLDG_01", description="Target building ID"),
+    floor_id: Optional[int] = Query(None, description="Optional floor filter"),
+    category: Optional[str] = Query(None, description="Optional category filter"),
+    query: str = Query("", description="Optional search keyword"),
+    limit: int = Query(50, ge=1, le=200, description="Max destinations to return"),
+    service: NavigationService = Depends(get_navigation_service),
+) -> DestinationListResponse:
+    """Lists verified destinations matching optional search query and filters."""
+    try:
+        return service.list_destinations(
+            dataset_id=dataset_id,
+            building_id=building_id,
+            floor_id=floor_id,
+            category=category,
+            query=query,
+            limit=limit,
+        )
+    except Exception as e:
+        logger.error(f"Error querying destinations for {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/navigation/routes",
+    response_model=PlannedRouteResponse,
+    summary="Plan and validate an indoor navigation route",
+    description="Computes Dijkstra or A* route with turn-by-turn guidance and wall collision rejection."
+)
+def plan_route(
+    dataset_id: str,
+    req: RoutePlanRequest,
+    service: NavigationService = Depends(get_navigation_service),
+) -> PlannedRouteResponse:
+    """Plans an indoor route satisfying topological constraints and preferences."""
+    try:
+        route = service.plan_route(dataset_id=dataset_id, req=req)
+        return PlannedRouteResponse(**route.to_dict())
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error planning route for {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/navigation/routes/{route_id}",
+    response_model=PlannedRouteResponse,
+    summary="Retrieve pre-computed indoor route by ID",
+    description="Fetches cached route including waypoints and turn-by-turn instructions."
+)
+def get_route(
+    dataset_id: str,
+    route_id: str,
+    service: NavigationService = Depends(get_navigation_service),
+) -> PlannedRouteResponse:
+    """Retrieves route by ID."""
+    route = service.get_route(dataset_id=dataset_id, route_id=route_id)
+    if not route:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Route '{route_id}' not found in active cache."
+        )
+    return PlannedRouteResponse(**route.to_dict())
+
+
+@router.post(
+    "/{dataset_id}/navigation/sessions",
+    response_model=NavigationSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Start an active indoor navigation session",
+    description="Initializes session state tracking with active route and progress events."
+)
+def create_navigation_session(
+    dataset_id: str,
+    req: CreateSessionRequest,
+    service: NavigationService = Depends(get_navigation_service),
+) -> NavigationSessionResponse:
+    """Creates a new navigation session."""
+    try:
+        session = service.create_session(dataset_id=dataset_id, req=req)
+        return NavigationSessionResponse(**session.to_dict())
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error starting navigation session for {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/navigation/sessions/{session_id}",
+    response_model=NavigationSessionResponse,
+    summary="Get active navigation session status",
+    description="Returns session metadata, route progress, reroute count, and active instructions."
+)
+def get_navigation_session(
+    dataset_id: str,
+    session_id: str,
+    service: NavigationService = Depends(get_navigation_service),
+) -> NavigationSessionResponse:
+    """Retrieves active session details."""
+    session = service.get_session(dataset_id=dataset_id, session_id=session_id)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Navigation session '{session_id}' not found."
+        )
+    return NavigationSessionResponse(**session.to_dict())
+
+
+@router.post(
+    "/{dataset_id}/navigation/sessions/{session_id}/progress",
+    response_model=NavigationProgressResponse,
+    summary="Update navigation progress with real-time localization fix",
+    description="Advances waypoints, checks cross-track deviation, and triggers debounced rerouting if off-route."
+)
+def update_navigation_progress(
+    dataset_id: str,
+    session_id: str,
+    req: NavigationProgressRequest,
+    service: NavigationService = Depends(get_navigation_service),
+) -> NavigationProgressResponse:
+    """Delivers user position fix to active navigation session."""
+    try:
+        prog, new_route, msg = service.update_progress(
+            dataset_id=dataset_id,
+            session_id=session_id,
+            req=req,
+        )
+        return NavigationProgressResponse(
+            current_x_m=prog.current_x_m,
+            current_y_m=prog.current_y_m,
+            current_floor_id=prog.current_floor_id,
+            current_waypoint_index=prog.current_waypoint_index,
+            next_instruction_index=prog.next_instruction_index,
+            distance_to_next_waypoint_m=prog.distance_to_next_waypoint_m,
+            remaining_distance_m=prog.remaining_distance_m,
+            completion_percentage=prog.completion_percentage,
+            cross_track_deviation_m=prog.cross_track_deviation_m,
+            is_off_route=prog.is_off_route,
+            localization_status=prog.localization_status,
+            confidence_level=prog.confidence_level,
+            status_message=msg,
+            updated_route=PlannedRouteResponse(**new_route.to_dict()) if new_route else None,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error updating navigation progress for {session_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/navigation/sessions/{session_id}/complete",
+    response_model=NavigationSessionResponse,
+    summary="Mark navigation session as completed",
+    description="Finalizes active session state."
+)
+def complete_navigation_session(
+    dataset_id: str,
+    session_id: str,
+    service: NavigationService = Depends(get_navigation_service),
+) -> NavigationSessionResponse:
+    """Completes active session."""
+    try:
+        session = service.complete_session(dataset_id=dataset_id, session_id=session_id)
+        return NavigationSessionResponse(**session.to_dict())
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error completing navigation session {session_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post(
+    "/{dataset_id}/navigation/evaluate",
+    response_model=NavigationEvaluateResponse,
+    summary="Benchmark indoor routing algorithms and simulated trips",
+    description="Compares Dijkstra vs A* execution time, nodes expanded, optimality, and rerouting responsiveness."
+)
+def evaluate_navigation(
+    dataset_id: str,
+    req: NavigationEvaluateRequest,
+    service: NavigationService = Depends(get_navigation_service),
+) -> NavigationEvaluateResponse:
+    """Executes comparative routing and simulated navigation benchmark."""
+    try:
+        report = service.evaluate(dataset_id=dataset_id, req=req)
+        return NavigationEvaluateResponse(
+            evaluation_id=report.evaluation_id,
+            building_id=report.building_id,
+            report=report.to_dict(),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error evaluating navigation for {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/{dataset_id}/navigation/evaluation",
+    response_model=NavigationEvaluateResponse,
+    summary="Get default comparative navigation benchmark report",
+    description="Runs or fetches synthetic multi-floor routing evaluation report."
+)
+def get_navigation_evaluation(
+    dataset_id: str,
+    building_id: str = Query("SYNTH_BLDG_01", description="Target building ID"),
+    service: NavigationService = Depends(get_navigation_service),
+) -> NavigationEvaluateResponse:
+    """Returns navigation evaluation report."""
+    req = NavigationEvaluateRequest(building_id=building_id)
+    report = service.evaluate(dataset_id=dataset_id, req=req)
+    return NavigationEvaluateResponse(
+        evaluation_id=report.evaluation_id,
+        building_id=report.building_id,
+        report=report.to_dict(),
+    )
+
 
 
 

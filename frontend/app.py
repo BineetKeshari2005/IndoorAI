@@ -43,6 +43,7 @@ from frontend.components.sensor_fusion_view import render_sensor_fusion_view
 from frontend.components.computer_vision_view import render_computer_vision_view
 from frontend.components.map_localization_view import render_map_localization_view
 from frontend.components.mapping_view import render_mapping_view
+from frontend.components.navigation_view import render_navigation_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
@@ -803,6 +804,7 @@ def render_multimodal_workspace() -> None:
             "15. Computer Vision & Landmarks",
             "16. Indoor Mapping & Spatial Graphs",
             "17. Map-Constrained Localization",
+            "18. Indoor Navigation & Route Planning",
         ]
         selected_sec = st.radio("Navigation", sections, index=0)
 
@@ -817,6 +819,7 @@ def render_multimodal_workspace() -> None:
         st.info("● Computer Vision & Landmarks: Task 25 Ready")
         st.info("● Indoor Spatial Maps: Task 26 Ready")
         st.info("● Map-Constrained PF: Task 27 Ready")
+        st.info("● Indoor Navigation: Task 28 Ready")
         st.caption("IndoorAI Multimodal Explorer v1.10.0")
 
     # Main Header
@@ -862,6 +865,8 @@ def render_multimodal_workspace() -> None:
         render_mapping_view(client)
     elif selected_sec == "17. Map-Constrained Localization":
         render_map_localization_view(client, selected_dataset_id)
+    elif selected_sec == "18. Indoor Navigation & Route Planning":
+        render_navigation_view(client, selected_dataset_id)
 
 
 def render_benchmark_workspace() -> None:

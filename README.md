@@ -48,7 +48,8 @@ IndoorAI/
 │   ├── evaluation/             # Positioning error metrics (Euclidean error, CEP50/95)
 │   ├── explainability/         # SHAP value diagnostics and error heatmaps
 │   ├── sensor_fusion/          # PDR step counter, EKF, Map-Constrained Particle Filter
-│   └── mapping/                # Floorplan graph models and metric coordinate systems
+│   ├── mapping/                # Floorplan graph models and metric coordinate systems
+│   └── navigation/             # Route planning, turn detection, progress tracking, rerouting
 │
 ├── backend/                    # FastAPI production backend
 │   └── app/
@@ -112,6 +113,7 @@ Detailed architectural and engineering documentation is maintained in the `docs/
 - [Computer Vision & Landmark Detection](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/COMPUTER_VISION_LANDMARK_DETECTION.md): Indoor landmark detection taxonomy (doors, stairs, elevators, signage), signboard OCR engine, persistent landmark registry with manual verification, and visual feature matching.
 - [Indoor Map Generation & Spatial Representation](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_MAP_GENERATION_AND_SPATIAL_REPRESENTATION.md): Metric 2D floorplans, topological navigation graphs, vertical transitions (stairs and elevators), geometric validation, atomic filesystem persistence, and RFC 7946 GeoJSON export.
 - [Map-Constrained Multimodal Localization (Particle Filter)](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/MAP_CONSTRAINED_MULTIMODAL_LOCALIZATION.md): Sequential Monte Carlo particle filter enforcing building boundaries, solid wall collision checks, doorway passages, multi-floor vertical transitions, Wi-Fi observation likelihoods, and visual landmarks.
+- [Indoor Navigation & Intelligent Route Planning](file:///Users/bineetkeshari/Desktop/IndoorAI/docs/INDOOR_NAVIGATION_AND_ROUTE_PLANNING.md): Dijkstra and A* graph search, multi-criteria cost functions, anti-fabrication solid wall audits, accessibility evaluations, turn-by-turn instruction HUD, progress tracking, and debounced dynamic rerouting.
 
 ---
 
@@ -198,4 +200,5 @@ Track our progress in [IMPLEMENTATION_STATUS.md](file:///Users/bineetkeshari/Des
 - **Task 25 (Computer Vision-Based Indoor Landmark Detection):** COMPLETED
 - **Task 26 (Indoor Map Generation & Spatial Representation):** COMPLETED
 - **Task 27 (Map-Constrained Multimodal Localization using a Particle Filter):** COMPLETED
-- **Tasks 28 through 30:** Pending subsequent implementation prompts.
+- **Task 28 (Indoor Navigation & Intelligent Route Planning):** COMPLETED
+- **Tasks 29 through 30:** Pending subsequent implementation prompts.

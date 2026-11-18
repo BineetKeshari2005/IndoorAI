@@ -986,6 +986,129 @@ class DatasetApiClient:
             return res.json()
         raise DatasetApiClientException(f"Failed to fetch evaluation report: HTTP {res.status_code}", details=res.text)
 
+    # =========================================================================
+    # Task 28 — Indoor Navigation & Route Planning Client Methods
+    # =========================================================================
+
+    def list_destinations(
+        self,
+        dataset_id: str,
+        building_id: str = "SYNTH_BLDG_01",
+        floor_id: Optional[int] = None,
+        category: Optional[str] = None,
+        query: str = "",
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """Lists or searches verified indoor destinations."""
+        params = [f"building_id={building_id}", f"query={query}", f"limit={limit}"]
+        if floor_id is not None:
+            params.append(f"floor_id={floor_id}")
+        if category:
+            params.append(f"category={category}")
+        query_str = "&".join(params)
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/destinations?{query_str}"
+        res = self._request("GET", url, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to list destinations: HTTP {res.status_code}", details=res.text)
+
+    def plan_indoor_route(
+        self,
+        dataset_id: str,
+        plan_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Plans a topologically constrained, wall-validated indoor route."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/routes"
+        res = self._request("POST", url, json=plan_params, timeout=30.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to plan indoor route: HTTP {res.status_code}", details=res.text)
+
+    def get_indoor_route(
+        self,
+        dataset_id: str,
+        route_id: str,
+    ) -> Dict[str, Any]:
+        """Retrieves a pre-computed indoor route by ID."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/routes/{route_id}"
+        res = self._request("GET", url, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to get indoor route: HTTP {res.status_code}", details=res.text)
+
+    def create_navigation_session(
+        self,
+        dataset_id: str,
+        session_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Starts an active indoor navigation session."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/sessions"
+        res = self._request("POST", url, json=session_params, timeout=30.0)
+        if res.status_code == 201:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to create navigation session: HTTP {res.status_code}", details=res.text)
+
+    def get_navigation_session(
+        self,
+        dataset_id: str,
+        session_id: str,
+    ) -> Dict[str, Any]:
+        """Retrieves active or completed navigation session details."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/sessions/{session_id}"
+        res = self._request("GET", url, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to get navigation session: HTTP {res.status_code}", details=res.text)
+
+    def update_navigation_progress(
+        self,
+        dataset_id: str,
+        session_id: str,
+        progress_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Submits user localization fix and updates navigation progress."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/sessions/{session_id}/progress"
+        res = self._request("POST", url, json=progress_params, timeout=20.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to update navigation progress: HTTP {res.status_code}", details=res.text)
+
+    def complete_navigation_session(
+        self,
+        dataset_id: str,
+        session_id: str,
+    ) -> Dict[str, Any]:
+        """Completes active navigation session."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/sessions/{session_id}/complete"
+        res = self._request("POST", url, timeout=15.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to complete navigation session: HTTP {res.status_code}", details=res.text)
+
+    def evaluate_navigation(
+        self,
+        dataset_id: str,
+        eval_params: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Executes comparative routing and simulated navigation benchmark."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/evaluate"
+        res = self._request("POST", url, json=eval_params, timeout=60.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to evaluate navigation: HTTP {res.status_code}", details=res.text)
+
+    def get_navigation_evaluation(
+        self,
+        dataset_id: str,
+        building_id: str = "SYNTH_BLDG_01",
+    ) -> Dict[str, Any]:
+        """Fetches default navigation benchmark report."""
+        url = f"{self.base_url}/api/datasets/{dataset_id}/navigation/evaluation?building_id={building_id}"
+        res = self._request("GET", url, timeout=40.0)
+        if res.status_code == 200:
+            return res.json()
+        raise DatasetApiClientException(f"Failed to get navigation evaluation: HTTP {res.status_code}", details=res.text)
+
 
 
 
