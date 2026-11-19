@@ -14,6 +14,7 @@ from frontend.components.map_localization_view import render_map_localization_vi
 from frontend.components.mapping_view import render_mapping_view
 from frontend.components.navigation_view import render_navigation_view
 from frontend.components.realtime_view import render_realtime_view
+from frontend.components.security_view import render_security_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
@@ -40,4 +41,5 @@ __all__ = [
     "render_map_localization_view",
     "render_navigation_view",
     "render_realtime_view",
+    "render_security_view",
 ]

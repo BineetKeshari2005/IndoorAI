@@ -29,14 +29,30 @@ class DatasetApiClient:
         self,
         base_url: Optional[str] = None,
         timeout_seconds: float = 30.0,
-        http_client: Optional[Any] = None
+        http_client: Optional[Any] = None,
+        auth_token: Optional[str] = None,
     ):
         self.base_url = (base_url or DEFAULT_BACKEND_URL).rstrip("/")
         self.timeout = timeout_seconds
         self.http_client = http_client
+        self.auth_token = auth_token
+
+    def set_token(self, token: Optional[str]) -> None:
+        """Sets or updates the active JWT authentication bearer token."""
+        self.auth_token = token
+
+    def clear_token(self) -> None:
+        """Clears the active JWT token, reverting to unauthenticated guest mode."""
+        self.auth_token = None
 
     def _request(self, method: str, url: str, timeout: Optional[float] = None, **kwargs) -> Any:
         """Executes an HTTP request using either the injected client or a fresh httpx.Client."""
+        headers = dict(kwargs.pop("headers", None) or {})
+        if self.auth_token and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
+        if headers:
+            kwargs["headers"] = headers
+
         if self.http_client is not None:
             func = getattr(self.http_client, method.lower())
             return func(url, **kwargs)
@@ -1215,6 +1231,125 @@ class DatasetApiClient:
         if res.status_code == 200:
             return res.json()
         raise DatasetApiClientException(f"Failed to attach navigation to realtime: HTTP {res.status_code}", details=res.text)
+
+    # =========================================================================
+    # Task 30 Authentication & Access Control Client APIs
+    # =========================================================================
+
+    def verify_token(self, token: Optional[str] = None) -> Dict[str, Any]:
+        """Verifies an authentication token with the backend and retrieves claims.
+
+        Args:
+            token: Optional token string to verify. If omitted, uses self.auth_token.
+
+        Returns:
+            Dictionary with verification status and decoded claims.
+
+        Raises:
+            DatasetApiClientException: If verification fails, expired, or rejected.
+        """
+        target_token = token if token is not None else self.auth_token
+        if not target_token:
+            raise DatasetApiClientException(
+                "No authentication token provided to verify.",
+                status_code=401,
+                details="Authentication token required.",
+            )
+
+        url = f"{self.base_url}/api/auth/verify"
+        headers = {"Authorization": f"Bearer {target_token}"}
+        try:
+            res = self._request("GET", url, headers=headers)
+            if res.status_code == 200:
+                return res.json()
+            detail = "Authentication failed"
+            try:
+                detail = res.json().get("detail", res.text)
+            except Exception:
+                detail = res.text
+            raise DatasetApiClientException(
+                f"Token verification rejected (HTTP {res.status_code}): {detail}",
+                status_code=res.status_code,
+                details=detail,
+            )
+        except DatasetApiClientException:
+            raise
+        except Exception as e:
+            logger.warning("Error verifying authentication token: %s", e)
+            raise DatasetApiClientException(f"Connection error verifying token: {e}")
+
+    def issue_token(
+        self,
+        user_id: str,
+        username: Optional[str] = None,
+        role: str = "SURVEYOR",
+        allowed_sessions: Optional[List[str]] = None,
+        device_id: Optional[str] = None,
+        expires_in_seconds: int = 3600,
+    ) -> Dict[str, Any]:
+        """Issues a signed JWT access token via the backend auth endpoint."""
+        url = f"{self.base_url}/api/auth/token"
+        payload = {
+            "user_id": user_id,
+            "username": username or user_id,
+            "role": role,
+            "allowed_sessions": allowed_sessions if allowed_sessions is not None else ["*"],
+            "device_id": device_id,
+            "expires_in_seconds": expires_in_seconds,
+        }
+        try:
+            res = self._request("POST", url, json=payload)
+            if res.status_code == 200:
+                return res.json()
+            detail = res.text
+            try:
+                detail = res.json().get("detail", detail)
+            except Exception:
+                pass
+            raise DatasetApiClientException(
+                f"Failed to issue token (HTTP {res.status_code}): {detail}",
+                status_code=res.status_code,
+                details=detail,
+            )
+        except DatasetApiClientException:
+            raise
+        except Exception as e:
+            logger.warning("Error issuing token: %s", e)
+            raise DatasetApiClientException(f"Connection error issuing token: {e}")
+
+    def generate_dev_token(
+        self,
+        role: str = "SURVEYOR",
+        user_id: str = "test_surveyor_01",
+        session_id: str = "TEST_SESSION_01",
+    ) -> Dict[str, Any]:
+        """Generates a developer/testing access token via the backend convenience endpoint."""
+        url = f"{self.base_url}/api/auth/dev-token"
+        params = {
+            "role": role,
+            "user_id": user_id,
+            "session_id": session_id,
+        }
+        try:
+            res = self._request("POST", url, params=params)
+            if res.status_code == 200:
+                return res.json()
+            detail = res.text
+            try:
+                detail = res.json().get("detail", detail)
+            except Exception:
+                pass
+            raise DatasetApiClientException(
+                f"Failed to generate dev token (HTTP {res.status_code}): {detail}",
+                status_code=res.status_code,
+                details=detail,
+            )
+        except DatasetApiClientException:
+            raise
+        except Exception as e:
+            logger.warning("Error generating dev token: %s", e)
+            raise DatasetApiClientException(f"Connection error generating dev token: {e}")
+
 
 
 

@@ -249,7 +249,7 @@ class SessionAccessController:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
                 cls._instance._registry: Dict[str, SessionOwnershipRecord] = {}
-                cls._instance._registry_lock = threading.Lock()
+                cls._instance._registry_lock = threading.RLock()
             return cls._instance
 
     def register_session(

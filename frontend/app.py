@@ -61,6 +61,7 @@ from frontend.components.map_localization_view import render_map_localization_vi
 from frontend.components.mapping_view import render_mapping_view
 from frontend.components.navigation_view import render_navigation_view
 from frontend.components.realtime_view import render_realtime_view
+from frontend.components.security_view import render_security_view
 from frontend.components.sensor_view import render_sensor_explorer
 from frontend.components.timeline_view import render_timeline_explorer
 from frontend.components.upload import render_upload
@@ -899,11 +900,9 @@ def render_section_f(service: PredictionService) -> None:
 
     st.caption("Benchmark verified on official UJIIndoorLoc 1,111 validation records under zero data leakage conditions.")
 
-    st.caption("Benchmark verified on official UJIIndoorLoc 1,111 validation records under zero data leakage conditions.")
-
 
 def render_multimodal_workspace() -> None:
-    """Renders the Multimodal Survey Dataset Explorer (Tasks 17-19)."""
+    """Renders the Multimodal Survey Dataset Explorer (Tasks 17-30)."""
     with st.sidebar:
         st.markdown("### 🔌 Backend Connection")
         backend_url = st.text_input(
@@ -911,13 +910,103 @@ def render_multimodal_workspace() -> None:
             value=os.getenv("INDOORAI_BACKEND_URL", DEFAULT_BACKEND_URL),
             help="URL of the running IndoorAI FastAPI backend service."
         )
-        client = DatasetApiClient(base_url=backend_url)
+        current_token: Optional[str] = st.session_state.get("auth_token")
+        client = DatasetApiClient(base_url=backend_url, auth_token=current_token)
         is_online, health_msg = client.check_health()
         if is_online:
             st.success(f"● {health_msg}")
         else:
             st.warning(f"○ {health_msg}")
             st.caption("Start backend: `python -m uvicorn backend.app.main:app --port 8000`")
+
+        st.markdown("---")
+        st.markdown("### 🔒 Authentication & Access")
+        auth_claims = st.session_state.get("auth_claims")
+
+        # Re-verify token if token present but claims not yet cached in session
+        if current_token and not auth_claims:
+            try:
+                v_res = client.verify_token(current_token)
+                auth_claims = v_res.get("claims")
+                st.session_state["auth_claims"] = auth_claims
+                st.session_state["auth_user"] = auth_claims.get("sub")
+                st.session_state["auth_role"] = auth_claims.get("role")
+            except Exception:
+                current_token = None
+                st.session_state["auth_token"] = None
+                st.session_state["auth_claims"] = None
+                client.clear_token()
+
+        if current_token and auth_claims:
+            role = auth_claims.get("role", "VIEWER")
+            user = auth_claims.get("sub", "Anonymous")
+            exp = int(auth_claims.get("exp", 0))
+            now = int(time.time())
+            diff = exp - now
+            mins_left = max(0, diff // 60)
+            role_icon = "🔴" if role == "ADMIN" else ("🔵" if role == "SURVEYOR" else ("🟢" if role == "NAVIGATOR" else "⚪"))
+            st.markdown(
+                f'<div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px; margin-bottom: 8px;">'
+                f'<span style="font-weight: 700; color: #0F172A;">{role_icon} Role: {role}</span><br>'
+                f'<span style="font-size: 0.85rem; color: #64748B;">User: <code>{user}</code></span><br>'
+                f'<span style="font-size: 0.8rem; color: #16A34A;">● Valid ({mins_left}m remaining)</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("🚪 Logout", key="sb_logout_btn", use_container_width=True):
+                st.session_state["auth_token"] = None
+                st.session_state["auth_claims"] = None
+                st.session_state["auth_user"] = None
+                st.session_state["auth_role"] = None
+                client.clear_token()
+                st.rerun()
+        else:
+            st.caption("⚪ Unauthenticated (Guest / Public)")
+            token_input = st.text_input(
+                "Bearer Token:",
+                type="password",
+                placeholder="eyJh...",
+                key="sb_token_input",
+                help="Paste a signed JWT access token.",
+            )
+            col_l1, col_l2 = st.columns([1, 1])
+            with col_l1:
+                if st.button("Verify & Login", key="sb_login_btn", use_container_width=True):
+                    if token_input.strip():
+                        try:
+                            res = client.verify_token(token_input.strip())
+                            st.session_state["auth_token"] = token_input.strip()
+                            st.session_state["auth_claims"] = res.get("claims")
+                            st.session_state["auth_user"] = res.get("claims", {}).get("sub")
+                            st.session_state["auth_role"] = res.get("claims", {}).get("role")
+                            client.set_token(token_input.strip())
+                            st.success("Authenticated!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Invalid Token: {e}")
+                    else:
+                        st.warning("Enter a token.")
+            with col_l2:
+                dev_role = st.selectbox(
+                    "Quick Role",
+                    ["SURVEYOR", "ADMIN", "NAVIGATOR", "VIEWER"],
+                    key="sb_dev_role",
+                    label_visibility="collapsed",
+                )
+            if st.button(f"⚡ Dev Token ({dev_role})", key="sb_quick_dev_btn", use_container_width=True):
+                try:
+                    tok = client.generate_dev_token(role=dev_role, user_id=f"dev_{dev_role.lower()}", session_id="*")
+                    t_str = tok.get("access_token")
+                    st.session_state["auth_token"] = t_str
+                    v_res = client.verify_token(t_str)
+                    st.session_state["auth_claims"] = v_res.get("claims")
+                    st.session_state["auth_user"] = f"dev_{dev_role.lower()}"
+                    st.session_state["auth_role"] = dev_role
+                    client.set_token(t_str)
+                    st.success("Dev token loaded!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Dev token error: {e}")
 
         st.markdown("---")
         st.markdown("### 📑 Explorer Sections")
@@ -941,6 +1030,7 @@ def render_multimodal_workspace() -> None:
             "17. Map-Constrained Localization",
             "18. Indoor Navigation & Route Planning",
             "19. Real-Time IndoorAI",
+            "20. Security & Access Control",
         ]
         selected_sec = st.radio("Navigation", sections, index=0)
 
@@ -957,12 +1047,13 @@ def render_multimodal_workspace() -> None:
         st.info("● Map-Constrained PF: Task 27 Ready")
         st.info("● Indoor Navigation: Task 28 Ready")
         st.info("● Real-Time Streaming: Task 29 Ready")
+        st.info("● Security & RBAC: Task 30 Ready")
         st.caption("IndoorAI Multimodal Explorer v1.11.0")
 
     # Main Header
     st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–29)</div>',
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–30)</div>',
         unsafe_allow_html=True
     )
 
@@ -1006,6 +1097,8 @@ def render_multimodal_workspace() -> None:
         render_navigation_view(client, selected_dataset_id)
     elif selected_sec == "19. Real-Time IndoorAI":
         render_realtime_view(client, selected_dataset_id)
+    elif selected_sec == "20. Security & Access Control":
+        render_security_view(client, selected_dataset_id)
 
 
 def render_benchmark_workspace() -> None:
@@ -1031,7 +1124,7 @@ def main():
         workspace_mode = st.radio(
             "Workspace View:",
             [
-                "🌐 Multimodal Survey Explorer (Tasks 17–29)",
+                "🌐 Multimodal Survey Explorer (Tasks 17–30)",
                 "🔬 UJIIndoorLoc Benchmark & Inference (Tasks 07–12)",
             ],
             index=0,
@@ -1039,7 +1132,7 @@ def main():
         )
         st.markdown("---")
 
-    if workspace_mode == "🌐 Multimodal Survey Explorer (Tasks 17–29)":
+    if workspace_mode == "🌐 Multimodal Survey Explorer (Tasks 17–30)":
         render_multimodal_workspace()
     else:
         render_benchmark_workspace()

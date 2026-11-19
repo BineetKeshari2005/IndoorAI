@@ -79,8 +79,14 @@ def issue_access_token(req: TokenRequest) -> TokenResponse:
 
 
 @router.get("/verify", summary="Verify Authenticated Token")
-def verify_token(claims: TokenClaims = Depends(get_current_user_claims)) -> Dict[str, Any]:
+def verify_token(claims: Optional[TokenClaims] = Depends(get_current_user_claims)) -> Dict[str, Any]:
     """Inspects and returns decoded claims for the current authenticated token."""
+    if claims is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token required to verify identity.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return {
         "status": "valid",
         "claims": claims.to_dict(),
