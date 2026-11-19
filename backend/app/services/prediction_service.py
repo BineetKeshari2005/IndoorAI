@@ -23,6 +23,7 @@ from src.features.signal_statistics import (
     extract_signal_statistics_from_dataframe,
     SUMMARY_FEATURE_NAMES,
 )
+from src.models.deep_learning.multitask_mlp import IndoorAIMultitaskMLP
 from src.models.traditional_ml.hybrid_localizer import HybridLocalizer
 from src.models.traditional_ml.knn import IndoorAIKNN
 from src.models.traditional_ml.random_forest import IndoorAIRandomForest
@@ -60,6 +61,7 @@ class PredictionService:
         self.base_dir = Path(base_dir or REPO_ROOT)
         self.rf_model: Optional[IndoorAIRandomForest] = None
         self.knn_model: Optional[IndoorAIKNN] = None
+        self.mlp_model: Optional[IndoorAIMultitaskMLP] = None
         self.hybrid_model: Optional[HybridLocalizer] = None
         self.scaler: Optional[Any] = None
 
@@ -97,6 +99,19 @@ class PredictionService:
         if self.knn_model is None:
             logger.info("Loading k-NN model from %s", knn_dir)
             self.knn_model = IndoorAIKNN.load(knn_dir)
+
+        mlp_path = self.base_dir / "experiments" / "mlp" / "models" / "multitask_mlp.pt"
+        if self.mlp_model is None:
+            if mlp_path.exists():
+                logger.info("Loading Multitask MLP model from %s", mlp_path)
+                try:
+                    self.mlp_model = IndoorAIMultitaskMLP.load(mlp_path, device="cpu")
+                except Exception as e:
+                    logger.error("Failed to load Multitask MLP checkpoint: %s", e)
+                    self.mlp_model = None
+            else:
+                logger.warning("Multitask MLP checkpoint not found at %s", mlp_path)
+                self.mlp_model = None
 
         if self.hybrid_model is None:
             logger.info("Loading Hybrid model from %s", hybrid_dir)
@@ -293,6 +308,53 @@ class PredictionService:
                 },
             }
 
+        elif "mlp" in name_lower or "deep" in name_lower:
+            if self.mlp_model is None:
+                raise RuntimeError(
+                    "Multitask MLP model checkpoint is not loaded. Cannot silently substitute another model."
+                )
+
+            preds = self.mlp_model.predict(features)
+            probas = self.mlp_model.predict_proba(features)
+
+            b_pred = int(preds["building"][0])
+            f_pred = int(preds["floor"][0])
+            bf_pred = int(preds["building_floor"][0])
+            lon_pred = float(preds["longitude"][0])
+            lat_pred = float(preds["latitude"][0])
+
+            b_prob = float(np.max(probas["building"][0]))
+            f_prob = float(np.max(probas["floor"][0]))
+            joint_conf = float(b_prob * f_prob)
+
+            return {
+                "model_name": "Multitask MLP (Task 12 Deep Learning)",
+                "pred_building": b_pred,
+                "pred_floor": f_pred,
+                "pred_building_floor": bf_pred,
+                "pred_longitude": lon_pred,
+                "pred_latitude": lat_pred,
+                "confidence": joint_conf,
+                "confidence_pct": round(joint_conf * 100, 2),
+                "is_confidence_calibrated": False,
+                "spatial_uncertainty": None,  # Point regressor: does not provide spatial dispersion
+                "details": {
+                    "architecture": "Multitask MLP with Shared Trunk (Dense 512->256->128) and 4 Task Heads",
+                    "building_confidence": b_prob,
+                    "floor_confidence": f_prob,
+                    "model_size_mb": 2.75,
+                    "parameters": 709258,
+                    "note": (
+                        "Confidence is the uncalibrated joint softmax score "
+                        "(Pmax_bldg * Pmax_floor). Deep neural networks produce uncalibrated probabilities."
+                    ),
+                    "uncertainty_note": (
+                        "Continuous metric point regression does not output spatial dispersion "
+                        "or empirical neighbor dispersion."
+                    ),
+                },
+            }
+
         elif "hybrid" in name_lower:
             preds = self.hybrid_model.predict(features)
             conf = float(preds["rf_confidence"][0])
@@ -464,70 +526,86 @@ class PredictionService:
 
     @classmethod
     def get_benchmark_table(cls, base_dir: Optional[Union[str, Path]] = None) -> pd.DataFrame:
-        """Load independently verified baseline benchmark results from Task 09 audit."""
+        """Load independently verified three-way benchmark results across Tasks 07, 08, and 12."""
         root = Path(base_dir or REPO_ROOT)
         json_path = root / "experiments" / "model_benchmark" / "metrics" / "benchmark_results.json"
+        mlp_json_path = root / "experiments" / "mlp" / "metrics" / "mlp_results.json"
+
+        rf_data = {
+            "Model": "Random Forest (Task 07 Baseline)",
+            "Type": "Multi-Head Ensemble (200 trees/head)",
+            "Building Acc (%)": 99.82,
+            "Floor Acc (%)": 88.66,
+            "Building-Floor Acc (%)": 88.48,
+            "Mean 2D Error (units)": 11.53,
+            "Median 2D Error (units)": 8.65,
+            "95th Pct Error (units)": 32.74,
+            "Model Size": "~561 MB",
+            "Status": "Verified Baseline (Task 07 / Task 09 Audit)",
+        }
+        knn_data = {
+            "Model": "k-Nearest Neighbors (Task 08 Baseline, k=7)",
+            "Type": "Instance-Based (Cosine, distance-weighted, k=7)",
+            "Building Acc (%)": 99.91,
+            "Floor Acc (%)": 84.43,
+            "Building-Floor Acc (%)": 84.43,
+            "Mean 2D Error (units)": 10.05,
+            "Median 2D Error (units)": 7.33,
+            "95th Pct Error (units)": 29.06,
+            "Model Size": "~17.7 MB",
+            "Status": "Verified Baseline (Task 08 / Task 09 Audit)",
+        }
+        mlp_data = {
+            "Model": "Multitask MLP (Task 12 Deep Learning)",
+            "Type": "Deep MLP (Backbone 512->256->128, 4 Task Heads)",
+            "Building Acc (%)": 99.82,
+            "Floor Acc (%)": 90.37,
+            "Building-Floor Acc (%)": 90.37,
+            "Mean 2D Error (units)": 12.18,
+            "Median 2D Error (units)": 10.06,
+            "95th Pct Error (units)": 28.77,
+            "Model Size": "~2.75 MB",
+            "Status": "Verified Deep Learning (Task 12)",
+        }
 
         if json_path.exists():
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            rf_recalc = data["recalculated_metrics"]["random_forest"]
-            knn_recalc = data["recalculated_metrics"]["knn"]
+            try:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    bench_data = json.load(f)
+                rf_recalc = bench_data["recalculated_metrics"]["random_forest"]
+                knn_recalc = bench_data["recalculated_metrics"]["knn"]
+                rf_data["Building Acc (%)"] = round(rf_recalc["building"]["accuracy_pct"], 2)
+                rf_data["Floor Acc (%)"] = round(rf_recalc["floor"]["accuracy_pct"], 2)
+                rf_data["Building-Floor Acc (%)"] = round(rf_recalc["building_floor"]["accuracy_pct"], 2)
+                rf_data["Mean 2D Error (units)"] = round(rf_recalc["coordinates"]["euclidean_error"]["mean"], 2)
+                rf_data["Median 2D Error (units)"] = round(rf_recalc["coordinates"]["euclidean_error"]["median"], 2)
+                rf_data["95th Pct Error (units)"] = round(rf_recalc["coordinates"]["euclidean_error"]["q95"], 2)
 
-            return pd.DataFrame([
-                {
-                    "Model": "Random Forest (Baseline)",
-                    "Type": "Multi-Head Ensemble (200 trees/head)",
-                    "Building Acc (%)": round(rf_recalc["building"]["accuracy_pct"], 2),
-                    "Floor Acc (%)": round(rf_recalc["floor"]["accuracy_pct"], 2),
-                    "Building-Floor Acc (%)": round(rf_recalc["building_floor"]["accuracy_pct"], 2),
-                    "Mean 2D Error (units)": round(rf_recalc["coordinates"]["euclidean_error"]["mean"], 2),
-                    "Median 2D Error (units)": round(rf_recalc["coordinates"]["euclidean_error"]["median"], 2),
-                    "95th Pct Error (units)": round(rf_recalc["coordinates"]["euclidean_error"]["q95"], 2),
-                    "Model Size": "561.1 MB",
-                    "Status": "Verified Baseline (Task 07 / Task 09 Audit)",
-                },
-                {
-                    "Model": "k-Nearest Neighbors (Baseline, k=7)",
-                    "Type": "Instance-Based (Cosine, distance-weighted, k=7)",
-                    "Building Acc (%)": round(knn_recalc["building"]["accuracy_pct"], 2),
-                    "Floor Acc (%)": round(knn_recalc["floor"]["accuracy_pct"], 2),
-                    "Building-Floor Acc (%)": round(knn_recalc["building_floor"]["accuracy_pct"], 2),
-                    "Mean 2D Error (units)": round(knn_recalc["coordinates"]["euclidean_error"]["mean"], 2),
-                    "Median 2D Error (units)": round(knn_recalc["coordinates"]["euclidean_error"]["median"], 2),
-                    "95th Pct Error (units)": round(knn_recalc["coordinates"]["euclidean_error"]["q95"], 2),
-                    "Model Size": "17.7 MB",
-                    "Status": "Verified Baseline (Task 08 / Task 09 Audit)",
-                },
-            ])
+                knn_data["Building Acc (%)"] = round(knn_recalc["building"]["accuracy_pct"], 2)
+                knn_data["Floor Acc (%)"] = round(knn_recalc["floor"]["accuracy_pct"], 2)
+                knn_data["Building-Floor Acc (%)"] = round(knn_recalc["building_floor"]["accuracy_pct"], 2)
+                knn_data["Mean 2D Error (units)"] = round(knn_recalc["coordinates"]["euclidean_error"]["mean"], 2)
+                knn_data["Median 2D Error (units)"] = round(knn_recalc["coordinates"]["euclidean_error"]["median"], 2)
+                knn_data["95th Pct Error (units)"] = round(knn_recalc["coordinates"]["euclidean_error"]["q95"], 2)
+            except Exception as e:
+                logger.debug("Using fallback values for RF/kNN benchmark: %s", e)
 
-        # Exact audited fallback if file is missing
-        return pd.DataFrame([
-            {
-                "Model": "Random Forest (Baseline)",
-                "Type": "Multi-Head Ensemble (200 trees/head)",
-                "Building Acc (%)": 99.82,
-                "Floor Acc (%)": 88.66,
-                "Building-Floor Acc (%)": 88.48,
-                "Mean 2D Error (units)": 11.53,
-                "Median 2D Error (units)": 8.65,
-                "95th Pct Error (units)": 32.74,
-                "Model Size": "561.1 MB",
-                "Status": "Verified Baseline (Task 07 / Task 09 Audit)",
-            },
-            {
-                "Model": "k-Nearest Neighbors (Baseline, k=7)",
-                "Type": "Instance-Based (Cosine, distance-weighted, k=7)",
-                "Building Acc (%)": 99.91,
-                "Floor Acc (%)": 84.43,
-                "Building-Floor Acc (%)": 84.43,
-                "Mean 2D Error (units)": 10.05,
-                "Median 2D Error (units)": 7.33,
-                "95th Pct Error (units)": 29.06,
-                "Model Size": "17.7 MB",
-                "Status": "Verified Baseline (Task 08 / Task 09 Audit)",
-            },
-        ])
+        if mlp_json_path.exists():
+            try:
+                with open(mlp_json_path, "r", encoding="utf-8") as f:
+                    m_data = json.load(f)
+                ovp = m_data.get("official_validation_performance", {})
+                if ovp:
+                    mlp_data["Building Acc (%)"] = round(ovp["building"]["accuracy_pct"], 2)
+                    mlp_data["Floor Acc (%)"] = round(ovp["floor"]["accuracy_pct"], 2)
+                    mlp_data["Building-Floor Acc (%)"] = round(ovp["building_floor"]["accuracy_pct"], 2)
+                    mlp_data["Mean 2D Error (units)"] = round(ovp["coordinates"]["euclidean_error"]["mean"], 2)
+                    mlp_data["Median 2D Error (units)"] = round(ovp["coordinates"]["euclidean_error"]["median"], 2)
+                    mlp_data["95th Pct Error (units)"] = round(ovp["coordinates"]["euclidean_error"]["q95"], 2)
+            except Exception as e:
+                logger.debug("Using fallback values for MLP benchmark: %s", e)
+
+        return pd.DataFrame([rf_data, knn_data, mlp_data])
 
     @classmethod
     def get_experimental_hybrid_table(cls, base_dir: Optional[Union[str, Path]] = None) -> pd.DataFrame:

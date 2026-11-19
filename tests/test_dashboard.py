@@ -158,12 +158,13 @@ class TestDashboardAndPredictionService(unittest.TestCase):
         self.assertIn("520", str(ctx.exception))
 
     def test_audited_benchmark_table(self):
-        """Verify benchmark table contains the 2 audited baselines with exact Task 09 metrics."""
+        """Verify benchmark table contains the audited baselines with verified metrics."""
         bench = self.service.get_benchmark_table()
-        self.assertEqual(len(bench), 2)
+        self.assertEqual(len(bench), 3)
 
         rf_row = bench[bench["Model"].str.contains("Random Forest")].iloc[0]
         knn_row = bench[bench["Model"].str.contains("k-Nearest Neighbors")].iloc[0]
+        mlp_row = bench[bench["Model"].str.contains("Multitask MLP")].iloc[0]
 
         # Verify exact Task 09 audited values
         self.assertEqual(rf_row["Building Acc (%)"], 99.82)
@@ -179,6 +180,14 @@ class TestDashboardAndPredictionService(unittest.TestCase):
         self.assertEqual(knn_row["Mean 2D Error (units)"], 10.05)
         self.assertEqual(knn_row["Median 2D Error (units)"], 7.33)
         self.assertEqual(knn_row["95th Pct Error (units)"], 29.06)
+
+        # Verify Task 12 Deep Learning MLP metrics
+        self.assertEqual(mlp_row["Building Acc (%)"], 99.82)
+        self.assertEqual(mlp_row["Floor Acc (%)"], 90.37)
+        self.assertEqual(mlp_row["Building-Floor Acc (%)"], 90.37)
+        self.assertEqual(mlp_row["Mean 2D Error (units)"], 12.18)
+        self.assertEqual(mlp_row["Median 2D Error (units)"], 10.06)
+        self.assertEqual(mlp_row["95th Pct Error (units)"], 28.77)
 
     def test_experimental_hybrid_table(self):
         """Verify experimental hybrid table contains Task 10 error analysis metrics."""

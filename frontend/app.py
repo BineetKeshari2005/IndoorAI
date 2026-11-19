@@ -12,7 +12,7 @@ import io
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # Ensure repository root is on PYTHONPATH and configure Matplotlib cache
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +24,23 @@ os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import plotly.io as pio
 import streamlit as st
+
+# Global white theme for Plotly charts across both workspaces
+pio.templates.default = "plotly_white"
+
+# Global white theme for Matplotlib figures
+plt.rcParams["figure.facecolor"] = "#FFFFFF"
+plt.rcParams["axes.facecolor"] = "#FFFFFF"
+plt.rcParams["axes.edgecolor"] = "#CBD5E1"
+plt.rcParams["axes.labelcolor"] = "#0F172A"
+plt.rcParams["text.color"] = "#0F172A"
+plt.rcParams["xtick.color"] = "#475569"
+plt.rcParams["ytick.color"] = "#475569"
+plt.rcParams["grid.color"] = "#E2E8F0"
+plt.rcParams["grid.alpha"] = 0.8
+plt.rcParams["figure.autolayout"] = True
 
 from backend.app.services.prediction_service import (
     PredictionService,
@@ -59,56 +75,98 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for modern styling
+# Custom CSS for modern white theme styling across both workspaces
 st.markdown(
     """
     <style>
+    /* Global clean white theme */
+    .stApp {
+        background-color: #FFFFFF !important;
+        color: #0F172A;
+    }
+    
+    /* Global sidebar styling */
+    [data-testid="stSidebar"] {
+        background-color: #F8FAFC !important;
+        border-right: 1px solid #E2E8F0;
+    }
+    [data-testid="stSidebar"] * {
+        color: #0F172A;
+    }
+    [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stCaption {
+        color: #64748B;
+    }
+
+    /* Main container clean spacing */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1280px;
+    }
+
+    /* Typography */
     .main-title {
         font-size: 2.3rem;
         font-weight: 800;
-        color: #1E3A8A;
+        color: #0F172A;
         margin-bottom: 0.2rem;
+        letter-spacing: -0.02em;
     }
     .sub-title {
-        font-size: 1.1rem;
-        color: #4B5563;
+        font-size: 1.05rem;
+        color: #64748B;
         margin-bottom: 1.5rem;
+        font-weight: 400;
     }
+
+    /* Metric and KPI Cards */
     .metric-card {
-        background-color: #F8FAFC;
+        background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
         border-radius: 8px;
         padding: 16px;
         text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .metric-card:hover {
+        box-shadow: 0 3px 6px rgba(0,0,0,0.06);
     }
     .metric-value {
         font-size: 1.8rem;
         font-weight: 700;
-        color: #1E40AF;
+        color: #2563EB;
     }
     .metric-label {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #64748B;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-top: 4px;
+        font-weight: 600;
     }
+
+    /* Prediction Result Card */
     .prediction-card {
-        background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%);
-        border: 1px solid #BFDBFE;
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
         border-radius: 10px;
-        padding: 20px;
-        margin-top: 10px;
-        margin-bottom: 15px;
+        padding: 22px;
+        margin-top: 12px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
+
+    /* Badges */
     .badge-match {
         background-color: #DCFCE7;
         color: #166534;
         padding: 4px 10px;
         border-radius: 12px;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        display: inline-block;
+        border: 1px solid #BBF7D0;
     }
     .badge-mismatch {
         background-color: #FEE2E2;
@@ -116,7 +174,9 @@ st.markdown(
         padding: 4px 10px;
         border-radius: 12px;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        display: inline-block;
+        border: 1px solid #FECACA;
     }
     .badge-experimental {
         background-color: #FEF3C7;
@@ -125,15 +185,38 @@ st.markdown(
         border-radius: 8px;
         font-size: 0.8rem;
         font-weight: 600;
+        display: inline-block;
+        border: 1px solid #FDE68A;
     }
+    .badge-mlp {
+        background-color: #EFF6FF;
+        color: #1D4ED8;
+        padding: 3px 8px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        border: 1px solid #BFDBFE;
+    }
+
+    /* Restrained Disclaimer / Notice Box */
     .disclaimer-box {
-        background-color: #FFFBEB;
-        border-left: 4px solid #F59E0B;
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-left: 4px solid #2563EB;
         padding: 14px 18px;
-        border-radius: 4px;
+        border-radius: 6px;
         margin-bottom: 20px;
-        color: #78350F;
-        font-size: 0.95rem;
+        color: #334155;
+        font-size: 0.93rem;
+        line-height: 1.5;
+    }
+
+    /* Dataframe tables styling */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        overflow: hidden;
     }
     </style>
     """,
@@ -158,9 +241,10 @@ def render_sidebar(service: PredictionService) -> str:
         st.markdown("### 🤖 Select Active Model")
         k_val = service.knn_model.params.n_neighbors if service.knn_model else 7
         model_options = [
-            "Random Forest (Task 07 Baseline)",
-            f"k-Nearest Neighbors (Task 08 Baseline, k={k_val})",
-            "Hybrid RF + k-NN (Task 10 Experimental)",
+            "Random Forest — Task 07 Baseline",
+            f"k-Nearest Neighbors — Task 08 Baseline (k={k_val})",
+            "Multitask MLP — Task 12 Deep Learning",
+            "Hybrid RF + k-NN — Task 10 Experimental",
         ]
         selected_model = st.radio(
             "Prediction Model",
@@ -168,7 +252,16 @@ def render_sidebar(service: PredictionService) -> str:
             index=0,
             help="Choose the model family to perform indoor localization.",
         )
-        st.caption(f"Active k-NN Config: k={k_val}, metric=cosine, weights=distance")
+
+        name_lower = selected_model.lower()
+        if "mlp" in name_lower:
+            st.caption("Active Config: Deep MLP (Backbone 512->256->128, 4 Task Heads, PyTorch CPU)")
+        elif "neighbor" in name_lower or "knn" in name_lower:
+            st.caption(f"Active Config: k={k_val}, metric=cosine, weights=distance")
+        elif "hybrid" in name_lower:
+            st.caption("Active Config: RF Stage 1 Macro + Local k-NN Stage 2 (tau=0.70)")
+        else:
+            st.caption("Active Config: 5-Head Ensemble (200 trees/head)")
 
         st.markdown("---")
         st.markdown("### 📑 Section Navigation")
@@ -185,10 +278,10 @@ def render_sidebar(service: PredictionService) -> str:
 
         st.markdown("---")
         st.markdown("### 🛡️ System Status")
-        st.success("● Pre-Trained Models: Ready (3/3)")
-        st.info("● Dataset: UJIIndoorLoc Benchmark")
+        st.success("● Pre-Trained Models: Ready (4/4)")
+        st.info("● Dataset: UJIIndoorLoc Benchmark (19,937 Train / 1,111 Val)")
         st.info("● Feature Pipeline: 1,058 Features")
-        st.caption("IndoorAI v1.0.1 — Task 11.1 Audited")
+        st.caption("IndoorAI v1.2.0 — Task 12 Deep Learning Integrated")
 
     return selected_model
 
@@ -241,7 +334,7 @@ def render_section_a(service: PredictionService) -> None:
         )
     with kpi_col6:
         st.markdown(
-            '<div class="metric-card"><div class="metric-value">3</div><div class="metric-label">Trained ML Models</div></div>',
+            '<div class="metric-card"><div class="metric-value">4</div><div class="metric-label">Trained ML Models</div></div>',
             unsafe_allow_html=True,
         )
 
@@ -448,17 +541,23 @@ def render_section_c(
     with col_btn:
         run_pred = st.button("📍 Run Localization Prediction", type="primary", use_container_width=True)
 
+    name_lower = active_model_name.lower()
     with col_info:
         k_val = service.knn_model.params.n_neighbors if service.knn_model else 7
-        if "Hybrid" in active_model_name:
+        if "mlp" in name_lower or "deep" in name_lower:
+            st.markdown(
+                '<span class="badge-mlp">DEEP LEARNING</span> <em>Multitask MLP with Shared Trunk (512 &rarr; 256 &rarr; 128) + 4 Task Heads (Building, Floor, Building-Floor, Longitude/Latitude). Checkpoint: 2.75 MB, 709,258 parameters.</em>',
+                unsafe_allow_html=True,
+            )
+        elif "hybrid" in name_lower:
             st.markdown(
                 '<span class="badge-experimental">EXPERIMENTAL PROTOTYPE</span> <em>Two-stage architecture: RF Macro Structural Routing + Localized k-NN Metric Interpolation (k=7, tau=0.70).</em>',
                 unsafe_allow_html=True,
             )
-        elif "Forest" in active_model_name:
-            st.caption("Random Forest: 5-head ensemble predicting Building, Floor, Building-Floor, Longitude, and Latitude (200 trees/head).")
+        elif "forest" in name_lower or "rf" in name_lower:
+            st.caption("Random Forest: 5-head ensemble predicting Building, Floor, Building-Floor, Longitude, and Latitude (200 trees/head). Size: ~561 MB.")
         else:
-            st.caption(f"k-Nearest Neighbors: Cosine distance metric with distance-weighted continuous regression (k={k_val}, Variant B features).")
+            st.caption(f"k-Nearest Neighbors: Cosine distance metric with distance-weighted continuous regression (k={k_val}, Variant B features). Size: ~17.7 MB.")
 
     # Run prediction automatically or on button click
     pred_res = service.predict(features_df, model_name=active_model_name)
@@ -476,12 +575,27 @@ def render_section_c(
     with p_col4:
         st.metric("Predicted Latitude", f"{pred_res['pred_latitude']:.2f}")
     with p_col5:
-        st.metric("Confidence (Pmax) *", f"{pred_res['confidence_pct']:.1f}%")
+        conf_label = "Confidence (Joint Softmax) *" if ("mlp" in name_lower or "deep" in name_lower) else "Confidence (Pmax) *"
+        st.metric(conf_label, f"{pred_res['confidence_pct']:.1f}%")
     with p_col6:
-        st.metric("Spatial Uncertainty", f"± {pred_res['spatial_uncertainty']:.1f} units")
+        unc_val = pred_res.get("spatial_uncertainty")
+        unc_text = f"± {unc_val:.1f} units" if unc_val is not None else "N/A (Point Regressor)"
+        st.metric("Spatial Uncertainty", unc_text)
 
-    # Sub-details if Hybrid
-    if "Hybrid" in active_model_name:
+    # Sub-details
+    if "mlp" in name_lower or "deep" in name_lower:
+        b_conf = pred_res["details"].get("building_confidence", 0.0) * 100
+        f_conf = pred_res["details"].get("floor_confidence", 0.0) * 100
+        st.caption(
+            f"**Deep Learning Output Breakdown:** Building Softmax: `{b_conf:.1f}%` | Floor Softmax: `{f_conf:.1f}%` | "
+            f"Joint Uncalibrated Softmax Score: `{pred_res['confidence_pct']:.1f}%` | Model Size: `2.75 MB` (PyTorch CPU)"
+        )
+        st.caption(
+            "*\\*Notice: Confidence reflects the uncalibrated joint softmax score ($P_{\\max,\\text{bldg}} \\times P_{\\max,\\text{floor}}$). "
+            "Deep neural networks produce uncalibrated probabilities; this is not a calibrated Bayesian posterior. "
+            "Continuous coordinates are point estimates without spatial dispersion.*"
+        )
+    elif "hybrid" in name_lower:
         used_local = pred_res["details"].get("used_local_knn", False)
         mode_text = (
             "✅ Routed to Localized Building-Floor k-NN Regressor"
@@ -489,8 +603,10 @@ def render_section_c(
             else "⚠️ High uncertainty fallback: routed to Global k-NN Regressor"
         )
         st.caption(f"**Hierarchical Routing Decision:** {mode_text} | *Note: Gating threshold tau=0.70 is experimental.*")
+        st.caption("*\\*Confidence indicates uncalibrated maximum ensemble vote / neighbor consensus proportion ($P_{\\max}$). It does not represent a calibrated Bayesian probability of correctness.*")
+    else:
+        st.caption("*\\*Confidence indicates uncalibrated maximum ensemble vote / neighbor consensus proportion ($P_{\\max}$). It does not represent a calibrated Bayesian probability of correctness.*")
 
-    st.caption("*\t*Confidence indicates uncalibrated maximum ensemble vote / neighbor consensus proportion ($P_{\\max}$). It does not represent a calibrated Bayesian probability of correctness.*")
     st.markdown("</div>", unsafe_allow_html=True)
 
     # Uncertainty and outlier callout
@@ -534,9 +650,11 @@ def render_section_d(
         title_suffix = "All Campus Buildings (0, 1, 2)"
 
     fig, ax = plt.subplots(figsize=(9, 5.5), dpi=120)
+    fig.patch.set_facecolor("#FFFFFF")
+    ax.set_facecolor("#FFFFFF")
 
-    # Color palette for buildings
-    colors = {0: "#3B82F6", 1: "#F59E0B", 2: "#8B5CF6"}
+    # Clean color palette for buildings
+    colors = {0: "#2563EB", 1: "#D97706", 2: "#7C3AED"}
     labels = {0: "Building 0 Ambient", 1: "Building 1 Ambient", 2: "Building 2 Ambient"}
 
     # Ambient points
@@ -545,9 +663,9 @@ def render_section_d(
         ax.scatter(
             subset["LONGITUDE"],
             subset["LATITUDE"],
-            c=colors.get(b_id, "#9CA3AF"),
+            c=colors.get(b_id, "#94A3B8"),
             label=labels.get(b_id, f"Building {b_id}"),
-            alpha=0.25,
+            alpha=0.22,
             s=22,
             edgecolors="none",
         )
@@ -559,7 +677,7 @@ def render_section_d(
         ax.scatter(
             gt_lon,
             gt_lat,
-            c="#10B981",
+            c="#059669",
             s=160,
             marker="s",
             edgecolors="#064E3B",
@@ -591,7 +709,7 @@ def render_section_d(
             fontsize=8.5,
             fontweight="bold",
             color="#991B1B",
-            bbox=dict(boxstyle="round,pad=0.2", facecolor="#FEE2E2", edgecolor="#F87171", alpha=0.9),
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="#FEF2F2", edgecolor="#FECACA", alpha=0.95),
             zorder=8,
         )
 
@@ -608,11 +726,11 @@ def render_section_d(
         zorder=9,
     )
 
-    ax.set_title(f"IndoorAI 2D Coordinate Map — {title_suffix}", fontsize=11, fontweight="bold", pad=10)
-    ax.set_xlabel("Dataset Longitude (Coordinate X)", fontsize=9)
-    ax.set_ylabel("Dataset Latitude (Coordinate Y)", fontsize=9)
-    ax.grid(True, linestyle=":", alpha=0.6)
-    ax.legend(loc="upper right", fontsize=8, framealpha=0.9)
+    ax.set_title(f"IndoorAI 2D Coordinate Map — {title_suffix}", fontsize=11, fontweight="bold", pad=10, color="#0F172A")
+    ax.set_xlabel("Dataset Longitude (Coordinate X)", fontsize=9, color="#0F172A")
+    ax.set_ylabel("Dataset Latitude (Coordinate Y)", fontsize=9, color="#0F172A")
+    ax.grid(True, linestyle=":", color="#E2E8F0", alpha=0.9)
+    ax.legend(loc="upper right", fontsize=8, framealpha=0.95, facecolor="#FFFFFF", edgecolor="#E2E8F0")
     plt.tight_layout()
 
     st.pyplot(fig, clear_figure=True)
@@ -701,11 +819,11 @@ def render_section_f(service: PredictionService) -> None:
     """Section F: Model Benchmarking & Selection."""
     st.markdown("### F. Model Benchmarking & Selection")
     st.markdown(
-        "Independently verified validation benchmarks on the 1,111 UJIIndoorLoc validation fingerprints across Tasks 07–10."
+        "Independently verified validation benchmarks on the 1,111 UJIIndoorLoc validation fingerprints across Tasks 07–12."
     )
 
-    st.markdown("#### 1. Independently Audited Baselines (Task 09 Source of Truth)")
-    st.caption("Audited and verified across all 1,111 validation records without information leakage.")
+    st.markdown("#### 1. Independently Audited Three-Way Baselines (Tasks 07, 08, & 12)")
+    st.caption("Audited and verified across all 1,111 validation records without information leakage. All coordinate errors in native dataset coordinate units (not metric metres).")
     if hasattr(service, "get_benchmark_table"):
         bench_df = service.get_benchmark_table()
     else:
@@ -715,7 +833,50 @@ def render_section_f(service: PredictionService) -> None:
         bench_df = ps_mod.PredictionService.get_benchmark_table(base_dir=REPO_ROOT)
     st.dataframe(bench_df, use_container_width=True)
 
-    st.markdown("#### 2. Experimental Research Prototype (Task 10 Error Analysis)")
+    st.markdown("#### 2. Comparative Strengths & Operational Trade-offs")
+    t_col1, t_col2, t_col3, t_col4 = st.columns(4)
+    with t_col1:
+        st.markdown("##### 🌲 Random Forest Baseline")
+        st.markdown(
+            """
+            - **Task:** 07 Baseline
+            - **Strengths:** Robust macro classification (99.82% building, 88.66% floor). Orthogonal decision boundaries capture vertical slab attenuation effectively.
+            - **Limitations:** Massive serialized footprint (~561 MB); piecewise step functions in 2D coordinate regression (11.53 units mean error).
+            - **Best Used For:** Campus macro structure identification and global fallback.
+            """
+        )
+    with t_col2:
+        st.markdown("##### 📍 k-Nearest Neighbors")
+        st.markdown(
+            """
+            - **Task:** 08 Baseline (k=7)
+            - **Strengths:** Lowest 2D coordinate error (10.05 units mean, 7.33 units median) due to continuous metric interpolation; compact size (~17.7 MB).
+            - **Limitations:** Lower floor accuracy (84.43%) due to multi-floor RF bleed distorting cosine distance metrics across vertical slabs.
+            - **Best Used For:** Continuous metric coordinate regression within confirmed floor regions.
+            """
+        )
+    with t_col3:
+        st.markdown("##### 🧠 Multitask MLP")
+        st.markdown(
+            """
+            - **Task:** 12 Deep Learning
+            - **Strengths:** Highest floor accuracy (90.37%) and joint building-floor accuracy (90.37%); ultra-compact footprint (~2.75 MB, 709K params); fast single-pass PyTorch inference.
+            - **Limitations:** Point regression yields higher 2D coordinate error (12.18 units mean, 10.06 units median) than k-NN; no built-in spatial uncertainty bounds.
+            - **Best Used For:** Resource-constrained mobile deployments prioritizing vertical floor discrimination.
+            """
+        )
+    with t_col4:
+        st.markdown("##### ⚡ Hybrid Localizer")
+        st.markdown(
+            """
+            - **Task:** 10 Experimental
+            - **Strengths:** Two-stage hierarchical routing (RF macro + local k-NN micro) achieves 9.98 units mean coordinate error on validation split.
+            - **Limitations:** Prone to catastrophic error propagation if Stage 1 RF misclassifies floor and confidence gating fails. Gating threshold (tau=0.70) was evaluated post-hoc.
+            - **Status:** Exploratory research prototype; unverified for production baselining.
+            """
+        )
+
+    st.markdown("#### 3. Experimental Research Prototype (Task 10 Error Analysis)")
     if hasattr(service, "get_experimental_hybrid_table"):
         hybrid_df = service.get_experimental_hybrid_table()
     elif hasattr(PredictionService, "get_experimental_hybrid_table"):
@@ -736,34 +897,7 @@ def render_section_f(service: PredictionService) -> None:
         unsafe_allow_html=True,
     )
 
-    t_col1, t_col2, t_col3 = st.columns(3)
-    with t_col1:
-        st.markdown("#### 🌲 Random Forest Baseline")
-        st.markdown(
-            """
-            - **Strengths:** Outstanding macro classification (99.82% building, 88.66% floor accuracy). Decision trees capture vertical slab attenuation effectively.
-            - **Limitations:** Large memory footprint (561 MB serialization); piecewise orthogonal step functions in coordinate regression (11.53 units mean error).
-            - **Best Used For:** Macro campus structure identification and global fallback.
-            """
-        )
-    with t_col2:
-        st.markdown("#### 📍 k-Nearest Neighbors Baseline")
-        st.markdown(
-            """
-            - **Strengths:** Continuous metric coordinate regression (10.05 units mean error, 7.33 units median); ultra-compact storage (17.7 MB).
-            - **Limitations:** Lower floor accuracy (84.43%) due to multi-floor RF bleed and vertical distance metric distortion.
-            - **Best Used For:** Continuous metric coordinate regression within confirmed floor regions.
-            """
-        )
-    with t_col3:
-        st.markdown("#### ⚡ Hybrid Localizer (Experimental)")
-        st.markdown(
-            """
-            - **Strengths:** Demonstrates potential of two-stage hierarchical localization: combines RF macro classification with localized micro k-NN regression (9.98 units mean error).
-            - **Limitations:** Suffers from catastrophic error propagation if Stage 1 RF misclassifies floor and confidence gating fails. Requires rigorous training-split threshold calibration.
-            - **Status:** Experimental research prototype; unverified for production baselining.
-            """
-        )
+    st.caption("Benchmark verified on official UJIIndoorLoc 1,111 validation records under zero data leakage conditions.")
 
     st.caption("Benchmark verified on official UJIIndoorLoc 1,111 validation records under zero data leakage conditions.")
 
@@ -828,7 +962,7 @@ def render_multimodal_workspace() -> None:
     # Main Header
     st.markdown('<div class="main-title">IndoorAI — Multimodal Survey Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–27)</div>',
+        '<div class="sub-title">Interactive exploration and quality assurance for mobile Wi-Fi, IMU, and visual survey datasets (Tasks 17–29)</div>',
         unsafe_allow_html=True
     )
 
@@ -897,7 +1031,7 @@ def main():
         workspace_mode = st.radio(
             "Workspace View:",
             [
-                "🌐 Multimodal Survey Explorer (Tasks 17–19)",
+                "🌐 Multimodal Survey Explorer (Tasks 17–29)",
                 "🔬 UJIIndoorLoc Benchmark & Inference (Tasks 07–12)",
             ],
             index=0,
@@ -905,7 +1039,7 @@ def main():
         )
         st.markdown("---")
 
-    if workspace_mode == "🌐 Multimodal Survey Explorer (Tasks 17–19)":
+    if workspace_mode == "🌐 Multimodal Survey Explorer (Tasks 17–29)":
         render_multimodal_workspace()
     else:
         render_benchmark_workspace()
