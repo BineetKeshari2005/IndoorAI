@@ -13,6 +13,12 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, status
 
 from src.core.logging import setup_logger
+from backend.app.core.security import (
+    TokenClaims,
+    authenticate_websocket_connection,
+    get_current_user_claims,
+    verify_session_permission,
+)
 from backend.app.schemas.realtime import (
     AttachNavigationRequest,
     BatchAckResponse,
@@ -45,13 +51,14 @@ async def websocket_session_stream(
     websocket: WebSocket,
     session_id: str,
     last_ack_event_id: Optional[str] = Query(None, description="Last event ID successfully acknowledged by client"),
+    token: Optional[str] = Query(None, description="Cryptographic JWT authentication token"),
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
 ):
     """Bidirectional WebSocket streaming interface for real-time sensor, Wi-Fi, and navigation data.
 
-    Supports live event ingestion, server acks, reconnection recovery via last_ack_event_id,
-    and asynchronous broadcasts of localization and navigation updates.
+    Enforces JWT authentication and session authorization checks prior to connection acceptance.
     """
+    await authenticate_websocket_connection(websocket=websocket, session_id=session_id, token=token)
     await pipeline.handle_websocket_connection(
         websocket=websocket,
         session_id=session_id,
@@ -68,8 +75,10 @@ def ingest_events_batch(
     session_id: str,
     request: BatchEventsRequest,
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> BatchAckResponse:
     """Ingests a batch of observation events via REST POST for clients unable to maintain WebSockets."""
+    verify_session_permission(session_id, claims)
     domain_events: List[RealtimeEvent] = []
     for s in request.events:
         domain_events.append(
@@ -126,8 +135,10 @@ def ingest_events_batch(
 def get_stream_status(
     session_id: str,
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> StreamStatusResponse:
     """Returns streaming throughput metrics, buffer utilization, and connection state for a session."""
+    verify_session_permission(session_id, claims)
     stream = pipeline.get_or_create_stream(session_id)
     connected = pipeline.connections.get_client_count(session_id)
     msg = stream.get_status_message(connected_clients=connected)
@@ -159,8 +170,10 @@ def control_session_stream(
     session_id: str,
     request: SessionControlRequest,
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> Dict[str, Any]:
     """Applies lifecycle actions (START, PAUSE, RESUME, STOP, CANCEL, RESET) to a streaming session."""
+    verify_session_permission(session_id, claims)
     stream = pipeline.get_or_create_stream(session_id)
     act = request.action.upper()
 
@@ -204,8 +217,10 @@ def get_stream_history(
     last_ack_seq: Optional[int] = Query(None, description="Fetch items strictly after this sequence number"),
     max_items: int = Query(100, ge=1, le=500),
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> Dict[str, Any]:
     """Retrieves buffered replay history for synchronization or reconnection inspection."""
+    verify_session_permission(session_id, claims)
     stream = pipeline.get_or_create_stream(session_id)
     items, is_gap = stream.replay.get_replay_since(
         last_ack_event_id=last_ack_event_id,
@@ -228,8 +243,10 @@ def simulate_step(
     session_id: str,
     request: SimulateStepRequest,
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> Dict[str, Any]:
     """Injects a synthetic simulation step into the session pipeline for development and testing."""
+    verify_session_permission(session_id, claims)
     ack, updates = pipeline.inject_synthetic_step(
         session_id=session_id,
         x_m=request.x_m,
@@ -252,8 +269,10 @@ def attach_navigation_session(
     session_id: str,
     request: AttachNavigationRequest,
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> Dict[str, Any]:
     """Links an active Task 28 navigation session to stream so location fixes drive turn-by-turn HUD updates."""
+    verify_session_permission(session_id, claims)
     nav_service = get_navigation_service()
     session_obj = nav_service.get_session(dataset_id="default", session_id=request.navigation_session_id)
     session_mgr = None
@@ -279,9 +298,13 @@ def attach_navigation_session(
 )
 def list_active_streaming_sessions(
     pipeline: RealtimePipeline = Depends(get_realtime_pipeline),
+    claims: Optional[TokenClaims] = Depends(get_current_user_claims),
 ) -> Dict[str, Any]:
-    """Returns all active streaming session IDs."""
+    """Returns all active streaming session IDs accessible to the caller."""
     sessions = pipeline.list_active_sessions()
+    if claims and claims.role != UserRole.ADMIN and "*" not in claims.allowed_sessions:
+        controller = get_access_controller()
+        sessions = [s for s in sessions if controller.is_authorized(s, claims)]
     return {
         "count": len(sessions),
         "active_session_ids": sessions,

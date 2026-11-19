@@ -62,6 +62,7 @@ class RealtimePipeline:
         building_id: str = "default_building",
         floor_id: int = 0,
         max_buffer_capacity: int = 5000,
+        owner_user_id: Optional[str] = None,
     ) -> SessionStream:
         """Retrieves or creates an in-memory SessionStream for a session."""
         with self._streams_lock:
@@ -71,9 +72,22 @@ class RealtimePipeline:
                     building_id=building_id,
                     floor_id=floor_id,
                     max_buffer_capacity=max_buffer_capacity,
+                    owner_user_id=owner_user_id,
                 )
-                logger.info("Created new SessionStream for session: %s", session_id)
+                logger.info("Created new SessionStream for session: %s (owner: %s)", session_id, owner_user_id)
             return self._streams[session_id]
+
+    def remove_stream(self, session_id: str) -> bool:
+        """Closes and removes an active SessionStream, freeing resources."""
+        with self._streams_lock:
+            stream = self._streams.pop(session_id, None)
+            if stream is not None:
+                stream.close()
+                from backend.app.core.security import get_access_controller
+                get_access_controller().unregister_session(session_id)
+                logger.info("Removed SessionStream and unregistered session: %s", session_id)
+                return True
+            return False
 
     def get_stream(self, session_id: str) -> Optional[SessionStream]:
         with self._streams_lock:
@@ -247,7 +261,8 @@ class RealtimePipeline:
     ) -> bool:
         """Links an active Task 28 navigation session to this streaming session."""
         stream = self.get_or_create_stream(session_id)
-        stream.attached_navigation_session = nav_session_manager
+        if nav_session_manager is not None:
+            stream.attached_navigation_session = nav_session_manager
         stream.active_navigation_session_id = nav_session_id
         logger.info("Attached navigation session %s to streaming session %s", nav_session_id, session_id)
         return True

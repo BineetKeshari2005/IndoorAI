@@ -82,8 +82,11 @@ class ParticleFilterState:
     status: FilterStatus
     particle_count: int
     effective_sample_size: float
-    particle_spread_m: float            # Weighted std dev of particle cloud positions
-    position_uncertainty_m: float        # Circular 95% confidence radius (2.447 * spread)
+    particle_spread_m: float            # Weighted std dev of particle cloud positions (empirical RMS spread)
+    position_uncertainty_m: float        # Conservative circular 95% confidence radius (2.447 * spread)
+    var_x: float = 0.0                  # Spatial variance along X axis (m^2)
+    var_y: float = 0.0                  # Spatial variance along Y axis (m^2)
+    cov_xy: float = 0.0                 # Spatial cross-covariance between X and Y (m^2)
     wall_crossings_rejected_count: int = 0
     resampled_this_step: bool = False
     observation_type: ObservationType = ObservationType.PDR_STEP
@@ -113,6 +116,9 @@ class ParticleFilterState:
             "effective_sample_size": round(self.effective_sample_size, 1),
             "particle_spread_m": round(self.particle_spread_m, 3),
             "position_uncertainty_m": round(self.position_uncertainty_m, 3),
+            "var_x": round(self.var_x, 4),
+            "var_y": round(self.var_y, 4),
+            "cov_xy": round(self.cov_xy, 4),
             "wall_crossings_rejected_count": self.wall_crossings_rejected_count,
             "resampled_this_step": self.resampled_this_step,
             "observation_type": self.observation_type.value,
@@ -138,6 +144,9 @@ class ParticleFilterState:
             effective_sample_size=float(data["effective_sample_size"]),
             particle_spread_m=float(data["particle_spread_m"]),
             position_uncertainty_m=float(data["position_uncertainty_m"]),
+            var_x=float(data.get("var_x", 0.0)),
+            var_y=float(data.get("var_y", 0.0)),
+            cov_xy=float(data.get("cov_xy", 0.0)),
             wall_crossings_rejected_count=int(data.get("wall_crossings_rejected_count", 0)),
             resampled_this_step=bool(data.get("resampled_this_step", False)),
             observation_type=ObservationType(data.get("observation_type", "PDR_STEP")),

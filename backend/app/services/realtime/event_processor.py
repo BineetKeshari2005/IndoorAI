@@ -159,15 +159,15 @@ class EventProcessor:
                     observed_bssids=list(rssi_dict.keys()),
                 )
                 pf_state = stream.attached_particle_filter.update_wifi(meas)
-                conf = "HIGH" if pf_state.uncertainty_radius_m < 3.0 else "MEDIUM"
+                conf = "HIGH" if pf_state.position_uncertainty_m < 3.0 else "MEDIUM"
                 return LiveLocalizationUpdateMessage(
                     session_id=stream.session_id,
-                    timestamp_ms=pf_state.timestamp_ms,
+                    timestamp_ms=pf_state.timestamp_epoch_ms,
                     x_m=pf_state.x_m,
                     y_m=pf_state.y_m,
                     floor_id=pf_state.floor_id,
-                    heading_rad=pf_state.heading_rad,
-                    uncertainty_radius_m=pf_state.uncertainty_radius_m,
+                    heading_rad=pf_state.theta_rad,
+                    uncertainty_radius_m=pf_state.position_uncertainty_m,
                     confidence_level=conf,
                     source="PARTICLE_FILTER",
                     source_event_id=event.event_id,
@@ -251,20 +251,23 @@ class EventProcessor:
         # Propagate through particle filter if attached
         if stream.attached_particle_filter is not None:
             try:
-                pf_state = stream.attached_particle_filter.predict_step(
+                from src.sensor_fusion.models import PdrStepEvent
+                step_ev = PdrStepEvent(
+                    step_index=0,
+                    timestamp_epoch_ms=event.server_receive_timestamp,
                     step_length_m=step_len,
                     heading_rad=heading,
-                    timestamp_ms=event.server_receive_timestamp,
                 )
+                pf_state = stream.attached_particle_filter.predict_step(step_ev)
                 return LiveLocalizationUpdateMessage(
                     session_id=stream.session_id,
-                    timestamp_ms=pf_state.timestamp_ms,
+                    timestamp_ms=pf_state.timestamp_epoch_ms,
                     x_m=pf_state.x_m,
                     y_m=pf_state.y_m,
                     floor_id=pf_state.floor_id,
-                    heading_rad=pf_state.heading_rad,
-                    uncertainty_radius_m=pf_state.uncertainty_radius_m,
-                    confidence_level="HIGH" if pf_state.uncertainty_radius_m < 3.0 else "MEDIUM",
+                    heading_rad=pf_state.theta_rad,
+                    uncertainty_radius_m=pf_state.position_uncertainty_m,
+                    confidence_level="HIGH" if pf_state.position_uncertainty_m < 3.0 else "MEDIUM",
                     source="PDR_PARTICLE_FILTER",
                     source_event_id=event.event_id,
                     building_id=stream.building_id,

@@ -260,11 +260,16 @@ class MapConstrainedParticleFilter:
             floor_weights[p.floor_id] = floor_weights.get(p.floor_id, 0.0) + p.weight
         best_floor = max(floor_weights.items(), key=lambda item: item[1])[0] if floor_weights else 0
 
-        # 4. Particle Spread (weighted standard deviation in meters)
+        # 4. Particle Spread & Anisotropic Spatial Covariance
         var_x = float(np.sum(weights * (xs - mean_x)**2))
         var_y = float(np.sum(weights * (ys - mean_y)**2))
+        cov_xy = float(np.sum(weights * (xs - mean_x) * (ys - mean_y)))
+        # Empirical RMS particle cloud spread in meters
         spread_m = math.sqrt(max(0.0, var_x + var_y))
-        # 95% circular confidence radius for 2D Rayleigh/Gaussian: ~2.447 * sigma
+        # Note on Uncertainty Representation: In constrained indoor corridors, particle distributions
+        # are frequently anisotropic (var_x != var_y) or multimodal. We report both anisotropic
+        # covariance (var_x, var_y, cov_xy) and empirical RMS spread spread_m.
+        # For circular confidence radius, we report ~2.447 * max(0.5, spread_m) as a conservative bound.
         uncert_m = 2.447 * max(0.5, spread_m)
 
         # 5. Status Determination
@@ -299,6 +304,9 @@ class MapConstrainedParticleFilter:
             effective_sample_size=n_eff,
             particle_spread_m=spread_m,
             position_uncertainty_m=uncert_m,
+            var_x=var_x,
+            var_y=var_y,
+            cov_xy=cov_xy,
             wall_crossings_rejected_count=wall_rejected,
             resampled_this_step=resampled,
             observation_type=obs_type,

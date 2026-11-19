@@ -42,10 +42,12 @@ class SessionStream:
         floor_id: int = 0,
         max_buffer_capacity: int = 5000,
         buffer_policy: BackpressurePolicy = BackpressurePolicy.DROP_OLDEST,
+        owner_user_id: Optional[str] = None,
     ) -> None:
         self.session_id = session_id
         self.building_id = building_id
         self.floor_id = floor_id
+        self.owner_user_id = owner_user_id
         self.is_active = True
         self.created_at_epoch_ms = int(time.time() * 1000)
         self.last_event_timestamp_ms: Optional[int] = None
@@ -123,6 +125,19 @@ class SessionStream:
     def stop(self) -> None:
         with self._lock:
             self.is_active = False
+
+    def close(self) -> None:
+        """Tears down stream resources, empties buffers, and detaches algorithms."""
+        with self._lock:
+            self.is_active = False
+            self.buffer.clear()
+            self._dedup_set.clear()
+            self._dedup_queue.clear()
+            self.attached_building_map = None
+            self.attached_radio_map = None
+            self.attached_particle_filter = None
+            self.attached_navigation_session = None
+            logger.info("SessionStream '%s' closed and resources released.", self.session_id)
 
     def get_status_message(self, connected_clients: int = 0) -> StreamStatusMessage:
         with self._lock:

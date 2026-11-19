@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.routes.auth import router as auth_router
 from backend.app.api.routes.datasets import router as datasets_router
 from backend.app.api.routes.realtime import router as realtime_router
 from src.core.config import get_settings
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
 
     # API v1 Router Mount
     api_v1_router = APIRouter(prefix="/api")
+    api_v1_router.include_router(auth_router)
     api_v1_router.include_router(datasets_router)
     api_v1_router.include_router(realtime_router)
     app.include_router(api_v1_router)
